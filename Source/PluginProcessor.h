@@ -48,6 +48,8 @@ private:
     int readPosition;
     bool isRecording;
     bool isPlaying;
+    bool hasRecordedLoop;
+    int recordedLoopLength;
     double currentSampleRate;
     int maxLoopLength;
 
