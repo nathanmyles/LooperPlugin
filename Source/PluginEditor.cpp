@@ -12,18 +12,17 @@ LooperAudioProcessorEditor::LooperAudioProcessorEditor (LooperAudioProcessor& p)
     titleLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (titleLabel);
 
-    loopLengthSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    loopLengthSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 20);
-    loopLengthSlider.setRange (0.1, 10.0, 0.1);
-    loopLengthSlider.setValue (2.0);
-    loopLengthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-    audioProcessor.parameters, "loopLength", loopLengthSlider);
-    addAndMakeVisible (loopLengthSlider);
+    volumeSlider.setSliderStyle (juce::Slider::LinearHorizontal);
+    volumeSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 20);
+    volumeSlider.setRange (0.0, 1.0, 0.1);
+    volumeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+    audioProcessor.parameters, "volume", volumeSlider);
+    addAndMakeVisible (volumeSlider);
 
-    loopLengthLabel.setFont (juce::FontOptions (12.0f));
-    loopLengthLabel.setText ("Loop Length (sec)", juce::dontSendNotification);
-    loopLengthLabel.setJustificationType (juce::Justification::centred);
-    addAndMakeVisible (loopLengthLabel);
+    volumeLabel.setFont (juce::FontOptions (12.0f));
+    volumeLabel.setText ("Volume", juce::dontSendNotification);
+    volumeLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (volumeLabel);
 
     recordButton.setButtonText ("Record");
     recordButton.setColour (juce::TextButton::buttonColourId, juce::Colours::red);
@@ -67,8 +66,8 @@ void LooperAudioProcessorEditor::resized()
     
     auto controlArea = bounds.removeFromTop (60);
     auto sliderArea = controlArea.removeFromTop (40);
-    loopLengthLabel.setBounds (sliderArea.removeFromTop (15));
-    loopLengthSlider.setBounds (sliderArea);
+    volumeLabel.setBounds (sliderArea.removeFromTop (15));
+    volumeSlider.setBounds (sliderArea);
     
     auto buttonArea = bounds.removeFromTop (50);
     int buttonWidth = 80;

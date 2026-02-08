@@ -18,9 +18,9 @@ public:
 private:
     LooperAudioProcessor& audioProcessor;
     
-    juce::Slider loopLengthSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> loopLengthAttachment;
-    juce::Label loopLengthLabel;
+    juce::Slider volumeSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> volumeAttachment;
+    juce::Label volumeLabel;
     
     juce::TextButton recordButton;
     juce::RangedAudioParameter* recordParam;

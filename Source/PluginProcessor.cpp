@@ -20,7 +20,7 @@ LooperAudioProcessor::LooperAudioProcessor()
     currentSampleRate (44100.0),
     maxLoopLength (44100 * 10)
 {
-    loopLengthParam = parameters.getRawParameterValue ("loopLength");
+    volumeParam = parameters.getRawParameterValue ("volume");
     recordParam = parameters.getRawParameterValue ("record");
     playParam = parameters.getRawParameterValue ("play");
     clearParam = parameters.getRawParameterValue ("clear");
@@ -211,9 +211,10 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (readPosition >= loopLengthInSamples)
                 readPosition = 0;
 
+            float volume = volumeParam->load();
             for (int channel = 0; channel < numChannels; ++channel)
             {
-                float sampleValue = loopBuffer.getSample (channel % 2, readPosition);
+                float sampleValue = loopBuffer.getSample (channel % 2, readPosition) * volume;
                 buffer.addSample (channel, sample, sampleValue);
             }
 
@@ -258,7 +259,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LooperAudioProcessor::create
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    layout.add (std::make_unique<juce::AudioParameterFloat>("loopLength", "Loop Length", juce::NormalisableRange<float>(0.1f, 10.0f, 0.1f), 2.0f));
+    layout.add (std::make_unique<juce::AudioParameterFloat>("volume", "Volume", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.7f));
     layout.add (std::make_unique<juce::AudioParameterBool>("record", "Record", false));
     layout.add (std::make_unique<juce::AudioParameterBool>("play", "Play", false));
     layout.add (std::make_unique<juce::AudioParameterBool>("clear", "Clear", false));

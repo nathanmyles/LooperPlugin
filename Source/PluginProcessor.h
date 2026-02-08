@@ -38,7 +38,7 @@ public:
 
     juce::AudioProcessorValueTreeState parameters;
 private:
-    std::atomic<float>* loopLengthParam = nullptr;
+    std::atomic<float>* volumeParam = nullptr;
     std::atomic<float>* recordParam = nullptr;
     std::atomic<float>* playParam = nullptr;
     std::atomic<float>* clearParam = nullptr;
