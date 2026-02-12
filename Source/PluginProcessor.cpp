@@ -224,7 +224,7 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // Recording
     if (recordingLoopIndex != -1)
     {
-        auto& currentLoop = loops[recordingLoopIndex];
+        auto& currentLoop = loops[static_cast<size_t>(recordingLoopIndex)];
         int maxRecordLength = (baseLoopLength > 0) ? baseLoopLength : maxLoopLength;
         int samplesToRecord = juce::jmin(numSamples, maxRecordLength - writePosition.load());
 
@@ -292,7 +292,7 @@ void LooperAudioProcessor::stopRecording(int loopIndex)
 {
     if (loopIndex >= 0 && loopIndex < static_cast<int>(loops.size()))
     {
-        auto& loop = loops[loopIndex];
+        auto& loop = loops[static_cast<size_t>(loopIndex)];
         int currentWritePos = writePosition.load();
 
         if (currentWritePos > 0)
@@ -383,7 +383,7 @@ void LooperAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
             for (int channel = 0; channel < loop->buffer.getNumChannels(); ++channel)
             {
                 loopStream.write(loop->buffer.getReadPointer(channel),
-                                sizeof(float) * loop->length);
+                                sizeof(float) * static_cast<size_t>(loop->length));
             }
         }
 
@@ -396,7 +396,7 @@ void LooperAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 
 void LooperAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ValueTree state = juce::ValueTree::readFromData (data, sizeInBytes);
+    juce::ValueTree state = juce::ValueTree::readFromData (data, static_cast<size_t>(sizeInBytes));
     if (state.isValid())
     {
         parameters.replaceState (state);
@@ -430,7 +430,7 @@ void LooperAudioProcessor::setStateInformation (const void* data, int sizeInByte
                     for (int channel = 0; channel < newLoop->buffer.getNumChannels(); ++channel)
                     {
                         loopStream.read(newLoop->buffer.getWritePointer(channel),
-                                       sizeof(float) * newLoop->length);
+                                       static_cast<int>(sizeof(float) * static_cast<size_t>(newLoop->length)));
                     }
                 }
 

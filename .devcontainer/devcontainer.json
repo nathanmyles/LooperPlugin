@@ -1,0 +1,35 @@
+{
+   "build": {
+      "dockerfile": "./Dockerfile",
+      "context": "."
+   },
+   "features": {
+      "ghcr.io/devcontainers/features/common-utils:2": {
+         "installZsh": true,
+         "configureZshAsDefaultShell": true,
+         "installOhMyZsh": true
+      },
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {
+         "moby": false
+      },
+      "ghcr.io/stu-bell/devcontainer-features/open-code:0": {}
+   },
+   "mounts": [
+    {
+      "source": "${localWorkspaceFolder}/.opencode/auth.json",
+      "target": "/home/vscode/.local/share/opencode/auth.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/.opencode/opencode.json",
+      "target": "/home/vscode/.config/opencode/opencode.json",
+      "type": "bind"
+    },
+    {
+      "source": "looper-build",
+      "target": "${containerWorkspaceFolder}/build",
+      "type": "volume"
+    }
+  ],
+  "postCreateCommand": "sudo chown -R vscode:vscode ${containerWorkspaceFolder}/build"
+}

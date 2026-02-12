@@ -24,7 +24,7 @@ A simple audio looping plugin built with the JUCE framework. This plugin allows 
 ```bash
 mkdir build
 cd build
-cmake ..
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 cmake --build .
 ```
 

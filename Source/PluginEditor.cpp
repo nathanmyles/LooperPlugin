@@ -40,7 +40,7 @@ LooperAudioProcessorEditor::LooperAudioProcessorEditor (LooperAudioProcessor& p)
     addAndMakeVisible (playButton);
     audioProcessor.parameters.addParameterListener ("play", this);
 
-    clearButton.setButtonText ("Clear");
+    clearButton.setButtonText ("Undo All");
     clearButton.setColour (juce::TextButton::buttonColourId, juce::Colours::grey);
     clearButton.onClick = [this] { 
         audioProcessor.requestClearAll();

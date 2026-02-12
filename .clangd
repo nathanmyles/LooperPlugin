@@ -1,0 +1,20 @@
+CompileFlags:
+  Add:
+    - -ILibraries/juce/modules
+    - -ILibraries/juce/modules/juce_audio_processors
+    - -ILibraries/juce/modules/juce_audio_basics
+    - -ILibraries/juce/modules/juce_audio_devices
+    - -ILibraries/juce/modules/juce_audio_formats
+    - -ILibraries/juce/modules/juce_audio_utils
+    - -ILibraries/juce/modules/juce_core
+    - -ILibraries/juce/modules/juce_data_structures
+    - -ILibraries/juce/modules/juce_dsp
+    - -ILibraries/juce/modules/juce_events
+    - -ILibraries/juce/modules/juce_graphics
+    - -ILibraries/juce/modules/juce_gui_basics
+    - -ILibraries/juce/modules/juce_gui_extra
+    - -std=c++17
+    - -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+Index:
+  Background: Build
+CompileDatabase: build
