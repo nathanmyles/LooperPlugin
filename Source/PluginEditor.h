@@ -3,7 +3,7 @@
 #include "PluginProcessor.h"
 
 class LooperAudioProcessorEditor  : public juce::AudioProcessorEditor,
-                                   public juce::Button::Listener
+                                   public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     LooperAudioProcessorEditor (LooperAudioProcessor&);
@@ -12,8 +12,8 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    // Button::Listener  
-    void buttonClicked (juce::Button* button) override;
+    // AudioProcessorValueTreeState::Listener
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
 
 private:
     LooperAudioProcessor& audioProcessor;
@@ -23,11 +23,13 @@ private:
     juce::Label volumeLabel;
     
     juce::TextButton recordButton;
-    juce::RangedAudioParameter* recordParam;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> recordAttachment;
+
     juce::TextButton playButton;
-    juce::RangedAudioParameter* playParam;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
+
     juce::TextButton clearButton;
-    juce::RangedAudioParameter* clearParam;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> clearAttachment;
     
     juce::Label titleLabel;
     juce::Label statusLabel;

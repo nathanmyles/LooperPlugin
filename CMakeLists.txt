@@ -10,10 +10,13 @@ file(
 )
 include(${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
 
+set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Libraries)
+
 CPMAddPackage(
     NAME juce
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
     GIT_TAG 8.0.12
+    SOURCE_DIR ${LIB_DIR}/juce
 )
 
 juce_add_plugin(LooperPlugin
@@ -27,7 +30,16 @@ juce_add_plugin(LooperPlugin
     PLUGIN_MANUFACTURER_CODE Namy
     PLUGIN_CODE Lopr
     FORMATS VST3 AU Standalone
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT "This app needs microphone access for audio looping"
 )
+
+if(APPLE)
+    add_custom_command(TARGET LooperPlugin_Standalone POST_BUILD
+        COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:LooperPlugin_Standalone>
+        COMMENT "Code signing Standalone app"
+    )
+endif()
 
 target_sources(LooperPlugin
     PRIVATE
@@ -46,9 +58,9 @@ target_compile_definitions(LooperPlugin
 
 target_link_libraries(LooperPlugin
     PRIVATE
-        PUBLIC juce::juce_audio_utils
-        PUBLIC juce::juce_dsp
-        PRIVATE juce::juce_recommended_config_flags
-        PRIVATE juce::juce_recommended_lto_flags
-        PRIVATE juce::juce_recommended_warning_flags
+        juce::juce_audio_utils
+        juce::juce_dsp
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
 )

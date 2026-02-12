@@ -2,7 +2,8 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class LooperAudioProcessor  : public juce::AudioProcessor
+class LooperAudioProcessor  : public juce::AudioProcessor,
+                              public juce::Timer
 {
 public:
     LooperAudioProcessor();
@@ -44,7 +45,7 @@ private:
     std::atomic<float>* clearParam = nullptr;
 
     juce::AudioBuffer<float> loopBuffer;
-    int writePosition;
+    std::atomic<int> writePosition;
     int readPosition;
     bool isRecording;
     bool isPlaying;
@@ -52,8 +53,16 @@ private:
     int recordedLoopLength;
     double currentSampleRate;
     int maxLoopLength;
+    
+    std::atomic<bool> requestStopRecording { false };
+    std::atomic<bool> requestClear { false };
+
+    void stopRecording();
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    
+    // Timer callback for message thread updates
+    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LooperAudioProcessor)
 };
