@@ -6,6 +6,12 @@ class LooperAudioProcessor  : public juce::AudioProcessor,
                               public juce::Timer
 {
 public:
+    struct Loop {
+        juce::AudioBuffer<float> buffer;
+        int length = 0;
+        bool hasContent = false;
+    };
+
     LooperAudioProcessor();
     ~LooperAudioProcessor() override;
 
@@ -38,26 +44,36 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState parameters;
+    
+public:
+    // Allow editor to access loop count for display
+    const std::vector<std::unique_ptr<Loop>>& getLoops() const { return loops; }
+    
+    // Thread-safe methods for UI actions
+    void requestClearAll();
+    void requestUndoLast();
+    
 private:
     std::atomic<float>* volumeParam = nullptr;
     std::atomic<float>* recordParam = nullptr;
     std::atomic<float>* playParam = nullptr;
-    std::atomic<float>* clearParam = nullptr;
 
-    juce::AudioBuffer<float> loopBuffer;
+    std::vector<std::unique_ptr<Loop>> loops;
+    int baseLoopLength = 0;
+    int recordingLoopIndex = -1;
     std::atomic<int> writePosition;
-    int readPosition;
-    bool isRecording;
+    std::atomic<int> readPosition;
     bool isPlaying;
-    bool hasRecordedLoop;
-    int recordedLoopLength;
     double currentSampleRate;
     int maxLoopLength;
     
     std::atomic<bool> requestStopRecording { false };
     std::atomic<bool> requestClear { false };
+    std::atomic<bool> requestUndo { false };
 
-    void stopRecording();
+    void stopRecording(int loopIndex);
+    void addNewLoop();
+    void removeLastLoop();
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     

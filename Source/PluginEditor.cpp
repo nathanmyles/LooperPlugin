@@ -42,20 +42,39 @@ LooperAudioProcessorEditor::LooperAudioProcessorEditor (LooperAudioProcessor& p)
 
     clearButton.setButtonText ("Clear");
     clearButton.setColour (juce::TextButton::buttonColourId, juce::Colours::grey);
-    clearButton.setClickingTogglesState (true);
-    clearAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.parameters, "clear", clearButton);
+    clearButton.onClick = [this] { 
+        audioProcessor.requestClearAll();
+        // Wait a bit for audio thread to process, then update UI
+        juce::Timer::callAfterDelay(50, [this] { updateLoopCount(); });
+    };
     addAndMakeVisible (clearButton);
-    audioProcessor.parameters.addParameterListener ("clear", this);
+
+    undoButton.setButtonText ("Undo");
+    undoButton.setColour (juce::TextButton::buttonColourId, juce::Colours::orange);
+    undoButton.onClick = [this] { 
+        audioProcessor.requestUndoLast();
+        // Wait a bit for audio thread to process, then update UI
+        juce::Timer::callAfterDelay(50, [this] { updateLoopCount(); });
+    };
+    addAndMakeVisible (undoButton);
 
     statusLabel.setFont (juce::FontOptions (12.0f));
     statusLabel.setText ("Ready", juce::dontSendNotification);
     statusLabel.setJustificationType (juce::Justification::centred);
     addAndMakeVisible (statusLabel);
 
+    loopCountLabel.setFont (juce::FontOptions (14.0f, juce::Font::bold));
+    loopCountLabel.setText ("Loops: 0", juce::dontSendNotification);
+    loopCountLabel.setJustificationType (juce::Justification::centred);
+    addAndMakeVisible (loopCountLabel);
+
     // trigger initial update
     parameterChanged("record", *audioProcessor.parameters.getRawParameterValue("record"));
     parameterChanged("play", *audioProcessor.parameters.getRawParameterValue("play"));
+    
+    // Set initial loop count
+    int initialLoopCount = static_cast<int>(audioProcessor.getLoops().size());
+    loopCountLabel.setText ("Loops: " + juce::String(initialLoopCount), juce::dontSendNotification);
 }
 
 LooperAudioProcessorEditor::~LooperAudioProcessorEditor()
@@ -63,6 +82,7 @@ LooperAudioProcessorEditor::~LooperAudioProcessorEditor()
     audioProcessor.parameters.removeParameterListener ("record", this);
     audioProcessor.parameters.removeParameterListener ("play", this);
     audioProcessor.parameters.removeParameterListener ("clear", this);
+    audioProcessor.parameters.removeParameterListener ("undo", this);
 }
 
 void LooperAudioProcessorEditor::paint (juce::Graphics& g)
@@ -95,18 +115,26 @@ void LooperAudioProcessorEditor::resized()
     recordButton.setBounds (buttonX, 250, buttonWidth, buttonHeight);
     playButton.setBounds (buttonX, 250 + buttonHeight + buttonSpacing, buttonWidth, buttonHeight);
     clearButton.setBounds (buttonX, 250 + (buttonHeight + buttonSpacing) * 2, buttonWidth, buttonHeight);
+    undoButton.setBounds (buttonX, 250 + (buttonHeight + buttonSpacing) * 3, buttonWidth, buttonHeight);
 
     // Status label (below buttons)
-    statusLabel.setBounds (0, 370, bounds.getWidth(), bounds.getHeight() - 370);
+    statusLabel.setBounds (0, 400, bounds.getWidth(), 30);
+    
+    // Loop count label (at bottom)
+    loopCountLabel.setBounds (0, 435, bounds.getWidth(), 25);
+}
+
+void LooperAudioProcessorEditor::updateLoopCount()
+{
+    int loopCount = static_cast<int>(audioProcessor.getLoops().size());
+    loopCountLabel.setText ("Loops: " + juce::String(loopCount), juce::dontSendNotification);
 }
 
 void LooperAudioProcessorEditor::parameterChanged (const juce::String& parameterID, float newValue)
 {
     juce::MessageManager::callAsync ([this, parameterID, newValue] {
-        // Use a SafePointer if needed, but for now we assume simple lifecycle
-        // Check if the editor is still valid?
-        // In a real plugin, use SafePointer<LooperAudioProcessorEditor> safeThis (this);
-        // if (safeThis == nullptr) return;
+        // Update loop count display
+        updateLoopCount();
 
         if (parameterID == "record")
         {
@@ -149,10 +177,6 @@ void LooperAudioProcessorEditor::parameterChanged (const juce::String& parameter
                 else
                     statusLabel.setText ("Ready", juce::dontSendNotification);
             }
-        }
-        else if (parameterID == "clear")
-        {
-             if (newValue > 0.5f) statusLabel.setText ("Cleared", juce::dontSendNotification);
         }
     });
 }

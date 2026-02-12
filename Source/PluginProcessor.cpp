@@ -13,19 +13,15 @@ LooperAudioProcessor::LooperAudioProcessor()
     parameters (*this, nullptr, "PARAMETERS", createParameterLayout()),
     writePosition (0),
     readPosition (0),
-    isRecording (false),
     isPlaying (false),
-    hasRecordedLoop (false),
-    recordedLoopLength (0),
     currentSampleRate (44100.0),
     maxLoopLength (44100 * 60)
 {
     volumeParam = parameters.getRawParameterValue ("volume");
     recordParam = parameters.getRawParameterValue ("record");
     playParam = parameters.getRawParameterValue ("play");
-    clearParam = parameters.getRawParameterValue ("clear");
-    
-    startTimerHz(30);
+
+    startTimerHz(60);  // Increased from 30Hz for faster button reset
 }
 
 LooperAudioProcessor::~LooperAudioProcessor()
@@ -104,13 +100,12 @@ void LooperAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     currentSampleRate = sampleRate;
     maxLoopLength = static_cast<int> (sampleRate * 60.0);
 
-    loopBuffer.setSize (2, maxLoopLength);
-    loopBuffer.clear();
-
+    // Clear all loops
+    loops.clear();
+    baseLoopLength = 0;
+    recordingLoopIndex = -1;
     writePosition = 0;
     readPosition = 0;
-    hasRecordedLoop = false;
-    recordedLoopLength = 0;
 }
 
 void LooperAudioProcessor::releaseResources()
@@ -138,6 +133,38 @@ bool LooperAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
 }
 #endif
 
+void LooperAudioProcessor::addNewLoop()
+{
+    auto newLoop = std::make_unique<Loop>();
+    newLoop->buffer.setSize(2, maxLoopLength);
+    newLoop->buffer.clear();
+    newLoop->length = 0;
+    newLoop->hasContent = false;
+    loops.push_back(std::move(newLoop));
+}
+
+void LooperAudioProcessor::removeLastLoop()
+{
+    if (!loops.empty())
+    {
+        // If currently recording this loop, cancel recording and reset record button
+        if (recordingLoopIndex == static_cast<int>(loops.size()) - 1)
+        {
+            recordingLoopIndex = -1;
+            writePosition = 0;
+            // Request record button reset on message thread
+            requestStopRecording.store(true);
+        }
+        loops.pop_back();
+
+        // If we removed the last loop, reset base length
+        if (loops.empty())
+        {
+            baseLoopLength = 0;
+        }
+    }
+}
+
 void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                          juce::MidiBuffer& midiMessages)
 {
@@ -146,33 +173,44 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
 
-    if (clearParam->load() > 0.5f && !requestClear.load())
+    // Handle clear action (triggered from UI)
+    if (requestClear.exchange(false))
     {
-        requestClear.store(true);
-        loopBuffer.clear();
+        loops.clear();
+        baseLoopLength = 0;
+        recordingLoopIndex = -1;
         writePosition = 0;
         readPosition = 0;
-        hasRecordedLoop = false;
-        recordedLoopLength = 0;
+    }
+
+    // Handle undo action (triggered from UI)
+    if (requestUndo.exchange(false))
+    {
+        removeLastLoop();
     }
 
     const auto shouldRecord = recordParam->load() > 0.5f;
     const auto shouldPlay = playParam->load() > 0.5f;
 
-    // Check requestStopRecording to prevent re-triggering if we just stopped due to length
-    if (shouldRecord && !isRecording && !requestStopRecording.load())
+    // Handle record toggle
+    if (shouldRecord && recordingLoopIndex == -1 && !requestStopRecording.load())
     {
-        isRecording = true;
+        // Start recording - create new loop
+        addNewLoop();
+        recordingLoopIndex = static_cast<int>(loops.size()) - 1;
         writePosition = 0;
-        loopBuffer.clear();
-        hasRecordedLoop = false;
-        recordedLoopLength = 0;
+
+        // If this is the first loop, we're setting the base length
+        // If not, we'll sync to baseLoopLength
     }
-    else if (!shouldRecord && isRecording)
+    else if (!shouldRecord && recordingLoopIndex != -1)
     {
-        stopRecording();
+        // Stop recording
+        stopRecording(recordingLoopIndex);
+        recordingLoopIndex = -1;
     }
 
+    // Handle play toggle
     if (shouldPlay && !isPlaying)
     {
         isPlaying = true;
@@ -183,39 +221,66 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         isPlaying = false;
     }
 
-    if (isRecording)
+    // Recording
+    if (recordingLoopIndex != -1)
     {
-        int samplesToRecord = juce::jmin (numSamples, maxLoopLength - writePosition.load());
+        auto& currentLoop = loops[recordingLoopIndex];
+        int maxRecordLength = (baseLoopLength > 0) ? baseLoopLength : maxLoopLength;
+        int samplesToRecord = juce::jmin(numSamples, maxRecordLength - writePosition.load());
 
-        for (int channel = 0; channel < numChannels; ++channel)
+        if (samplesToRecord > 0)
         {
-            loopBuffer.copyFrom (channel, writePosition.load(), buffer, channel, 0, samplesToRecord);
-        }
+            for (int channel = 0; channel < numChannels; ++channel)
+            {
+                currentLoop->buffer.copyFrom(channel, writePosition.load(), buffer, channel, 0, samplesToRecord);
+            }
 
-        writePosition += samplesToRecord;
+            writePosition += samplesToRecord;
+            currentLoop->length = writePosition.load();
 
-        if (writePosition.load() >= maxLoopLength)
-        {
-            isRecording = false;
-            // Unsafe: parameters.getParameterAsValue("record").setValue(false);
-            requestStopRecording.store(true);
+            // If we've hit the base loop length or max, stop
+            if (writePosition.load() >= maxRecordLength && baseLoopLength > 0)
+            {
+                requestStopRecording.store(true);
+            }
+            else if (writePosition.load() >= maxLoopLength)
+            {
+                requestStopRecording.store(true);
+            }
         }
     }
 
-    if (isPlaying && hasRecordedLoop)
+    // Playback - mix all loops
+    if (isPlaying && !loops.empty())
     {
-        int loopLengthInSamples = recordedLoopLength;
+        float volume = volumeParam->load();
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            if (readPosition >= loopLengthInSamples)
-                readPosition = 0;
+            // Wrap read position to base loop length
+            int readPos = readPosition.load();
+            if (baseLoopLength > 0 && readPos >= baseLoopLength)
+            {
+                readPos = 0;
+                readPosition.store(0);
+            }
 
-            float volume = volumeParam->load();
             for (int channel = 0; channel < numChannels; ++channel)
             {
-                float sampleValue = loopBuffer.getSample (channel % 2, readPosition) * volume;
-                buffer.addSample (channel, sample, sampleValue);
+                float mixedSample = 0.0f;
+
+                // Mix all loops
+                for (auto& loop : loops)
+                {
+                    if (loop->hasContent)
+                    {
+                        // Wrap to individual loop length
+                        int loopReadPos = readPos % loop->length;
+                        mixedSample += loop->buffer.getSample(channel % 2, loopReadPos);
+                    }
+                }
+
+                buffer.addSample(channel, sample, mixedSample * volume);
             }
 
             readPosition++;
@@ -223,29 +288,39 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 }
 
-void LooperAudioProcessor::stopRecording()
+void LooperAudioProcessor::stopRecording(int loopIndex)
 {
-    isRecording = false;
-    int currentWritePos = writePosition.load();
-    if (currentWritePos > 0)
+    if (loopIndex >= 0 && loopIndex < static_cast<int>(loops.size()))
     {
-        hasRecordedLoop = true;
-        recordedLoopLength = currentWritePos;
+        auto& loop = loops[loopIndex];
+        int currentWritePos = writePosition.load();
 
-        // Apply Crossfade (approx 10ms)
-        int fadeSamples = juce::jmin (recordedLoopLength, (int) (currentSampleRate * 0.01));
-
-        if (fadeSamples > 0)
+        if (currentWritePos > 0)
         {
-            for (int channel = 0; channel < loopBuffer.getNumChannels(); ++channel)
+            loop->hasContent = true;
+            loop->length = currentWritePos;
+
+            // If this is the first loop, set base length
+            if (baseLoopLength == 0)
             {
-                auto* channelData = loopBuffer.getWritePointer (channel);
-                for (int i = 0; i < fadeSamples; ++i)
+                baseLoopLength = loop->length;
+            }
+
+            // Apply Crossfade (approx 10ms)
+            int fadeSamples = juce::jmin(loop->length, (int)(currentSampleRate * 0.01));
+
+            if (fadeSamples > 0)
+            {
+                for (int channel = 0; channel < loop->buffer.getNumChannels(); ++channel)
                 {
-                    float alpha = (float) i / (float) fadeSamples;
-                    int endSampleIdx = recordedLoopLength - fadeSamples + i;
-                    // Mix start of loop into end of loop
-                    channelData[endSampleIdx] = channelData[endSampleIdx] * (1.0f - alpha) + channelData[i] * alpha;
+                    auto* channelData = loop->buffer.getWritePointer(channel);
+                    for (int i = 0; i < fadeSamples; ++i)
+                    {
+                        float alpha = (float)i / (float)fadeSamples;
+                        int endSampleIdx = loop->length - fadeSamples + i;
+                        // Mix start of loop into end of loop
+                        channelData[endSampleIdx] = channelData[endSampleIdx] * (1.0f - alpha) + channelData[i] * alpha;
+                    }
                 }
             }
         }
@@ -259,13 +334,16 @@ void LooperAudioProcessor::timerCallback()
         parameters.getParameterAsValue("record").setValue(false);
         requestStopRecording.store(false);
     }
-    
-    if (requestClear.load())
-    {
-        auto clearValue = parameters.getParameterAsValue("clear");
-        clearValue.setValue(false);
-        requestClear.store(false);
-    }
+}
+
+void LooperAudioProcessor::requestClearAll()
+{
+    requestClear.store(true);
+}
+
+void LooperAudioProcessor::requestUndoLast()
+{
+    requestUndo.store(true);
 }
 
 bool LooperAudioProcessor::hasEditor() const
@@ -281,6 +359,37 @@ juce::AudioProcessorEditor* LooperAudioProcessor::createEditor()
 void LooperAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::ValueTree state = parameters.copyState();
+
+    // Add loop count
+    state.setProperty("loopCount", static_cast<int>(loops.size()), nullptr);
+    state.setProperty("baseLoopLength", baseLoopLength, nullptr);
+
+    // Save each loop's audio data
+    for (size_t i = 0; i < loops.size(); ++i)
+    {
+        juce::String loopKey = "loop_" + juce::String(i);
+        auto& loop = loops[i];
+
+        juce::MemoryBlock loopData;
+        juce::MemoryOutputStream loopStream(loopData, true);
+
+        // Write loop metadata
+        loopStream.writeInt(loop->length);
+        loopStream.writeBool(loop->hasContent);
+
+        // Write audio data
+        if (loop->hasContent && loop->length > 0)
+        {
+            for (int channel = 0; channel < loop->buffer.getNumChannels(); ++channel)
+            {
+                loopStream.write(loop->buffer.getReadPointer(channel),
+                                sizeof(float) * loop->length);
+            }
+        }
+
+        state.setProperty(loopKey, loopData.toBase64Encoding(), nullptr);
+    }
+
     juce::MemoryOutputStream stream (destData, true);
     state.writeToStream (stream);
 }
@@ -291,6 +400,43 @@ void LooperAudioProcessor::setStateInformation (const void* data, int sizeInByte
     if (state.isValid())
     {
         parameters.replaceState (state);
+
+        // Restore loops
+        int loopCount = state.getProperty("loopCount", 0);
+        baseLoopLength = state.getProperty("baseLoopLength", 0);
+
+        loops.clear();
+
+        for (int i = 0; i < loopCount; ++i)
+        {
+            juce::String loopKey = "loop_" + juce::String(i);
+            juce::String loopDataBase64 = state.getProperty(loopKey, "");
+
+            if (loopDataBase64.isNotEmpty())
+            {
+                juce::MemoryBlock loopData;
+                loopData.fromBase64Encoding(loopDataBase64);
+                juce::MemoryInputStream loopStream(loopData, false);
+
+                auto newLoop = std::make_unique<Loop>();
+                newLoop->buffer.setSize(2, maxLoopLength);
+                newLoop->buffer.clear();
+
+                newLoop->length = loopStream.readInt();
+                newLoop->hasContent = loopStream.readBool();
+
+                if (newLoop->hasContent && newLoop->length > 0)
+                {
+                    for (int channel = 0; channel < newLoop->buffer.getNumChannels(); ++channel)
+                    {
+                        loopStream.read(newLoop->buffer.getWritePointer(channel),
+                                       sizeof(float) * newLoop->length);
+                    }
+                }
+
+                loops.push_back(std::move(newLoop));
+            }
+        }
     }
 }
 
@@ -301,7 +447,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout LooperAudioProcessor::create
     layout.add (std::make_unique<juce::AudioParameterFloat>("volume", "Volume", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.7f));
     layout.add (std::make_unique<juce::AudioParameterBool>("record", "Record", false));
     layout.add (std::make_unique<juce::AudioParameterBool>("play", "Play", false));
-    layout.add (std::make_unique<juce::AudioParameterBool>("clear", "Clear", false));
 
     return layout;
 }

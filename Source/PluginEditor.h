@@ -14,6 +14,8 @@ public:
 
     // AudioProcessorValueTreeState::Listener
     void parameterChanged (const juce::String& parameterID, float newValue) override;
+    
+    void updateLoopCount();
 
 private:
     LooperAudioProcessor& audioProcessor;
@@ -29,10 +31,14 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> playAttachment;
 
     juce::TextButton clearButton;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> clearAttachment;
+    // No attachment - handled directly via onClick
+
+    juce::TextButton undoButton;
+    // No attachment - handled directly via onClick
     
     juce::Label titleLabel;
     juce::Label statusLabel;
+    juce::Label loopCountLabel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LooperAudioProcessorEditor)
 };
