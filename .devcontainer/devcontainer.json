@@ -16,13 +16,18 @@
    },
    "mounts": [
     {
-      "source": "${localWorkspaceFolder}/.opencode/auth.json",
+      "source": "${localEnv:HOME}/.local/share/opencode/auth.json",
       "target": "/home/vscode/.local/share/opencode/auth.json",
       "type": "bind"
     },
+   {
+      "source": "${localEnv:HOME}/.local/share/opencode/storage",
+      "target": "/home/vscode/.local/share/opencode/storage",
+      "type": "bind"
+    },
     {
-      "source": "${localWorkspaceFolder}/.opencode/opencode.json",
-      "target": "/home/vscode/.config/opencode/opencode.json",
+      "source": "${localEnv:HOME}/.config/opencode",
+      "target": "/home/vscode/.config/opencode",
       "type": "bind"
     },
     {

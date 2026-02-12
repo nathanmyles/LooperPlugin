@@ -13,7 +13,7 @@ A simple audio looping plugin built with the JUCE framework. This plugin allows 
 ## Requirements
 
 - JUCE 8.0 or later
-- CMake 3.22 or later
+- CMake 3.15 or later
 - C++17 compatible compiler
 - macOS (with Xcode), Windows (with Visual Studio), or Linux
 
@@ -35,9 +35,9 @@ This will build the plugin in the following formats:
 
 ### 2. Installation
 
-- **macOS**: Build artifacts will be placed in `build/LooperPlugin_artifacts/VST3` and `build/LooperPlugin_artifacts/AU`
-- **Windows**: VST3 files will be in `build/LooperPlugin_artifacts/VST3`
-- **Linux**: VST3 files will be in `build/LooperPlugin_artifacts/VST3`
+  - **macOS**: Build artifacts will be placed in `build/LooperPlugin_artefacts/VST3` and `build/LooperPlugin_artefacts/AU`
+  - **Windows**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
+  - **Linux**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
 
 Install the plugin files to your DAW's plugin directory.
 
@@ -102,10 +102,6 @@ Source/
 4. Test thoroughly
 5. Submit a pull request
 
-## License
-
-This project is open source. Please see the LICENSE file for details.
-
 ## Troubleshooting
 
 ### Plugin not loading in DAW
@@ -122,8 +118,7 @@ This project is open source. Please see the LICENSE file for details.
 - Make sure all submodules are initialized
 - Check CMake version compatibility
 - Verify compiler requirements (C++17)
-- Run `./setup_juce.sh <version>` if JUCE submodule is missing
-- Use `cmake -DENABLE_JUCE_VERSION_CHECK=OFF ..` to skip version checks if needed
+- JUCE is automatically fetched via CPM during the CMake configure step
 
 ## Support
 
