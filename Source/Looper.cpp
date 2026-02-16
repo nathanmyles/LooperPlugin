@@ -25,6 +25,18 @@ void Looper::startRecording()
 {
     addNewLoop();
     recordingLoopIndex = static_cast<int>(loops.size()) - 1;
+
+    // Capture the current playback position as the start offset
+    // This is where in the base loop the overdub will be placed
+    if (baseLoopLength > 0)
+    {
+        loops[recordingLoopIndex]->startOffset = readPosition.load() % baseLoopLength;
+    }
+    else
+    {
+        loops[recordingLoopIndex]->startOffset = 0;
+    }
+
     writePosition = 0;
 }
 
@@ -38,13 +50,15 @@ void Looper::stopRecording()
         if (currentWritePos > 0)
         {
             loop->hasContent = true;
-            loop->length = currentWritePos;
 
             // If this is the first loop, set base length
             if (baseLoopLength == 0)
             {
-                baseLoopLength = loop->length;
+                baseLoopLength = currentWritePos;
             }
+
+            // Pad loop to base length so all loops are the same length
+            loop->length = baseLoopLength;
 
             // Apply Crossfade
             applyCrossfade(recordingLoopIndex);
@@ -164,9 +178,16 @@ void Looper::processPlayback(juce::AudioBuffer<float>& outputBuffer, float volum
             {
                 if (loop->hasContent)
                 {
-                    // Wrap to individual loop length
-                    int loopReadPos = readPos % loop->length;
-                    mixedSample += loop->buffer.getSample(channel, loopReadPos);
+                    // Calculate position within this loop, accounting for start offset
+                    // readPos is the global position, we need to find where we are
+                    // relative to when this loop started recording
+                    int effectivePos = (readPos - loop->startOffset + baseLoopLength) % baseLoopLength;
+
+                    // Only play if we're within the recorded portion of this loop
+                    if (effectivePos < loop->length)
+                    {
+                        mixedSample += loop->buffer.getSample(channel, effectivePos);
+                    }
                 }
             }
 
@@ -244,6 +265,7 @@ void Looper::getState(juce::ValueTree& state, double sampleRate) const
 
         // Write loop metadata
         loopStream.writeInt(loop->length);
+        loopStream.writeInt(loop->startOffset);
         loopStream.writeBool(loop->hasContent);
 
         // Write audio data
@@ -287,6 +309,7 @@ void Looper::setState(const juce::ValueTree& state, double sampleRate)
             newLoop->buffer.clear();
 
             newLoop->length = loopStream.readInt();
+            newLoop->startOffset = loopStream.readInt();
             newLoop->hasContent = loopStream.readBool();
 
             if (newLoop->hasContent && newLoop->length > 0)

@@ -18,6 +18,7 @@ public:
     {
         juce::AudioBuffer<float> buffer;
         int length = 0;
+        int startOffset = 0;  // Where in the base loop this recording started
         bool hasContent = false;
     };
 
