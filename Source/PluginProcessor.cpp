@@ -15,6 +15,7 @@ LooperAudioProcessor::LooperAudioProcessor()
     volumeParam = parameters.getRawParameterValue ("volume");
     recordParam = parameters.getRawParameterValue ("record");
     playParam = parameters.getRawParameterValue ("play");
+    monitorParam = parameters.getRawParameterValue ("monitor");
 
     startTimerHz(60);
 }
@@ -129,6 +130,7 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     const auto shouldRecord = recordParam->load() > 0.5f;
     const auto shouldPlay = playParam->load() > 0.5f;
+    const auto shouldMonitor = monitorParam->load() > 0.5f;
 
     // Handle record toggle
     if (shouldRecord && !looper.isRecording())
@@ -155,6 +157,13 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     // Playback - mix all loops
     float volume = volumeParam->load();
+
+    // If not monitoring, clear input before playback to prevent feedback
+    if (!shouldMonitor)
+    {
+        buffer.clear();
+    }
+
     looper.processPlayback(buffer, volume);
 }
 
@@ -219,6 +228,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LooperAudioProcessor::create
     layout.add (std::make_unique<juce::AudioParameterFloat>("volume", "Volume", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.7f));
     layout.add (std::make_unique<juce::AudioParameterBool>("record", "Record", false));
     layout.add (std::make_unique<juce::AudioParameterBool>("play", "Play", false));
+    layout.add (std::make_unique<juce::AudioParameterBool>("monitor", "Monitor", false));
 
     return layout;
 }

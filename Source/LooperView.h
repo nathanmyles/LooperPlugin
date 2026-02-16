@@ -51,6 +51,10 @@ private:
     juce::TextButton clearButton;
     juce::TextButton undoButton;
 
+    // Monitoring button
+    juce::TextButton monitorButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> monitorAttachment;
+
     // Labels
     juce::Label titleLabel;
     juce::Label statusLabel;

@@ -9,10 +9,12 @@ LooperView::LooperView(juce::AudioProcessorValueTreeState& params,
     // Add parameter listeners
     parameters.addParameterListener("record", this);
     parameters.addParameterListener("play", this);
+    parameters.addParameterListener("monitor", this);
 
     // Trigger initial update
     parameterChanged("record", *parameters.getRawParameterValue("record"));
     parameterChanged("play", *parameters.getRawParameterValue("play"));
+    parameterChanged("monitor", *parameters.getRawParameterValue("monitor"));
 
     // Set initial loop count
     updateLoopCount();
@@ -22,6 +24,7 @@ LooperView::~LooperView()
 {
     parameters.removeParameterListener("record", this);
     parameters.removeParameterListener("play", this);
+    parameters.removeParameterListener("monitor", this);
 }
 
 void LooperView::setupComponents()
@@ -45,9 +48,19 @@ void LooperView::setupComponents()
     volumeLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(volumeLabel);
 
+    // Monitor button
+    monitorButton.setButtonText("Monitor: Off");
+    monitorButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    monitorButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::royalblue);
+    monitorButton.setClickingTogglesState(true);
+    monitorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        parameters, "monitor", monitorButton);
+    addAndMakeVisible(monitorButton);
+
     // Record button
     recordButton.setButtonText("Record");
-    recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkred);
+    recordButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
     recordButton.setClickingTogglesState(true);
     recordAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         parameters, "record", recordButton);
@@ -55,7 +68,8 @@ void LooperView::setupComponents()
 
     // Play button
     playButton.setButtonText("Play");
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgreen);
+    playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::green);
     playButton.setClickingTogglesState(true);
     playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
         parameters, "play", playButton);
@@ -123,16 +137,17 @@ void LooperView::resized()
     int buttonSpacing = 10;
     int buttonX = (bounds.getWidth() - buttonWidth) / 2;
 
-    recordButton.setBounds(buttonX, 250, buttonWidth, buttonHeight);
-    playButton.setBounds(buttonX, 250 + buttonHeight + buttonSpacing, buttonWidth, buttonHeight);
-    clearButton.setBounds(buttonX, 250 + (buttonHeight + buttonSpacing) * 2, buttonWidth, buttonHeight);
-    undoButton.setBounds(buttonX, 250 + (buttonHeight + buttonSpacing) * 3, buttonWidth, buttonHeight);
+    monitorButton.setBounds(buttonX, 230, buttonWidth, buttonHeight);
+    recordButton.setBounds(buttonX, 230 + buttonHeight + buttonSpacing, buttonWidth, buttonHeight);
+    playButton.setBounds(buttonX, 230 + (buttonHeight + buttonSpacing) * 2, buttonWidth, buttonHeight);
+    clearButton.setBounds(buttonX, 230 + (buttonHeight + buttonSpacing) * 3, buttonWidth, buttonHeight);
+    undoButton.setBounds(buttonX, 230 + (buttonHeight + buttonSpacing) * 4, buttonWidth, buttonHeight);
 
     // Status label (below buttons)
-    statusLabel.setBounds(0, 400, bounds.getWidth(), 30);
+    statusLabel.setBounds(0, 430, bounds.getWidth(), 30);
 
     // Loop count label (at bottom)
-    loopCountLabel.setBounds(0, 435, bounds.getWidth(), 25);
+    loopCountLabel.setBounds(0, 465, bounds.getWidth(), 25);
 }
 
 void LooperView::updateLoopCount()
@@ -166,18 +181,28 @@ void LooperView::parameterChanged(const juce::String& parameterID, float newValu
         // Update loop count display
         updateLoopCount();
 
-        if (parameterID == "record")
+        if (parameterID == "monitor")
+        {
+            bool isMonitoring = newValue > 0.5f;
+            if (isMonitoring)
+            {
+                monitorButton.setButtonText("Monitor: On");
+            }
+            else
+            {
+                monitorButton.setButtonText("Monitor: Off");
+            }
+        }
+        else if (parameterID == "record")
         {
             bool isRecording = newValue > 0.5f;
             if (isRecording)
             {
                 recordButton.setButtonText("Stop");
-                recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkred);
             }
             else
             {
                 recordButton.setButtonText("Record");
-                recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
             }
             updateStatusLabel();
         }
@@ -187,12 +212,10 @@ void LooperView::parameterChanged(const juce::String& parameterID, float newValu
             if (isPlaying)
             {
                 playButton.setButtonText("Stop");
-                playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgreen);
             }
             else
             {
                 playButton.setButtonText("Play");
-                playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
             }
             updateStatusLabel();
         }

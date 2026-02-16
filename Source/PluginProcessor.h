@@ -53,6 +53,7 @@ private:
     std::atomic<float>* volumeParam = nullptr;
     std::atomic<float>* recordParam = nullptr;
     std::atomic<float>* playParam = nullptr;
+    std::atomic<float>* monitorParam = nullptr;
 
     Looper looper;
     double currentSampleRate = 44100.0;
