@@ -1,21 +1,22 @@
 # LooperPlugin
 
-A simple audio looping plugin built with the JUCE framework. This plugin allows you to record audio input and play it back in a loop with adjustable length.
+A multi-loop audio looper plugin built with the JUCE framework. Record multiple synchronized loops with automatic timing and layer them for rich, complex sounds.
 
 ## Features
 
-- **Record**: Capture up to 10 seconds of audio input
-- **Play**: Loop recorded audio with adjustable length (0.1-10 seconds)
-- **Clear**: Reset the loop buffer
-- **Real-time controls**: Start/stop recording and playback on the fly
-- **Adjustable loop length**: Control playback duration independently from recording length
+- **Multi-Loop Recording**: Record up to 8 loops that automatically synchronize to the first loop
+- **Automatic Loop Length**: The first loop sets the base length; all subsequent loops are constrained to match
+- **Loop Synchronization**: Overdubs can be recorded at any position within the loop and maintain their timing
+- **Input Monitoring**: Toggle to control whether input audio passes through to output (prevents feedback when using microphones)
+- **Undo**: Remove the last recorded loop individually
+- **Clear All**: Reset and start fresh
+- **Volume Control**: Adjust playback volume
 
 ## Requirements
 
 - JUCE 8.0 or later
 - CMake 3.15 or later
 - C++17 compatible compiler
-- macOS (with Xcode), Windows (with Visual Studio), or Linux
 
 ## Building
 
@@ -35,28 +36,40 @@ This will build the plugin in the following formats:
 
 ### 2. Installation
 
-  - **macOS**: Build artifacts will be placed in `build/LooperPlugin_artefacts/VST3` and `build/LooperPlugin_artefacts/AU`
-  - **Windows**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
-  - **Linux**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
+- **macOS**: Build artifacts will be placed in `build/LooperPlugin_artefacts/VST3` and `build/LooperPlugin_artefacts/AU`
+- **Windows**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
+- **Linux**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
 
 Install the plugin files to your DAW's plugin directory.
 
 ## Usage
 
 1. Load the LooperPlugin in your DAW
-2. Click **Record** to capture audio input (up to 10 seconds)
-3. Click **Stop** when you're done recording
-4. Adjust the **Loop Length** slider to set playback duration
-5. Click **Play** to loop the recorded audio
-6. Use **Clear** to reset and record a new loop
+2. Click **Record** to start the base loop
+3. Click **Stop** (Record button changes to Stop) when done - this sets the loop length
+4. Click **Play** to start looping
+5. Click **Record** again to overdub additional loops - they will sync to the base loop
+6. Click **Undo** to remove the last recorded loop
+7. Use **Clear All** to remove all loops and start over
+8. Toggle **Monitor** to control input passthrough (OFF prevents feedback with microphones)
+9. Adjust the **Volume** slider to control playback level
 
 ### Controls
 
-- **Record Button**: Starts/stops recording. Red when recording.
+- **Monitor Button**: Toggles input monitoring. Blue when ON (input passes through), grey when OFF (input muted).
+- **Record Button**: Starts/stops recording. Red when recording, changes to "Stop".
 - **Play Button**: Starts/stops playback. Green when playing.
-- **Clear Button**: Clears the recorded audio buffer.
-- **Loop Length Slider**: Adjusts the playback loop duration (0.1-10 seconds).
-- **Status Display**: Shows current state (Ready, Recording..., Playing..., Cleared).
+- **Undo All Button**: Removes all recorded loops.
+- **Undo Button**: Removes the last recorded loop.
+- **Volume Slider**: Adjusts playback volume (0-100%).
+- **Loop Count**: Displays the number of recorded loops.
+
+### Loop Behavior
+
+- **First Loop**: Sets the base length for all subsequent loops
+- **Overdubs**: Can be recorded at any point in the loop cycle and maintain their position
+- **Synchronization**: All loops wrap at the same time, keeping everything in time
+- **Maximum Length**: Up to 60 seconds per loop
 
 ## Plugin Parameters
 
@@ -64,10 +77,10 @@ All parameters are automatable and can be controlled by your DAW:
 
 | Parameter | Range | Description |
 |-----------|-------|-------------|
-| Loop Length | 0.1-10.0 seconds | Duration of the playback loop |
+| Volume | 0.0-1.0 | Playback volume level |
 | Record | Boolean | Toggle recording on/off |
 | Play | Boolean | Toggle playback on/off |
-| Clear | Boolean | Clears the loop buffer (momentary) |
+| Monitor | Boolean | Toggle input monitoring on/off |
 
 ## Technical Details
 
@@ -75,7 +88,8 @@ All parameters are automatable and can be controlled by your DAW:
 - **Buffer Size**: Optimized for real-time performance
 - **Channels**: Stereo input/output
 - **Latency**: Low latency design suitable for live performance
-- **Memory**: Uses circular buffer for efficient audio storage
+- **Memory**: Circular buffers for efficient multi-loop storage
+- **Crossfade**: Automatic crossfading at loop boundaries to prevent clicks
 
 ## Development
 
@@ -83,16 +97,19 @@ The plugin is structured as follows:
 
 ```
 Source/
-├── PluginProcessor.h/cpp  # Audio processing engine
-└── PluginEditor.h/cpp      # User interface
+├── PluginProcessor.h/cpp   # Audio processing engine (DAW interface)
+├── PluginEditor.h/cpp      # Main editor component
+├── Looper.h/cpp            # Core looping logic and audio processing
+└── LooperView.h/cpp        # UI controls for the looper
 ```
 
 ### Architecture
 
-- `LooperAudioProcessor`: Core audio processing, manages recording/playback state
-- `LooperAudioProcessorEditor`: GUI controls and parameter display
-- Circular buffer implementation for efficient audio looping
-- Parameter automation via JUCE's AudioProcessorParameter system
+- `LooperAudioProcessor`: DAW interface, manages plugin lifecycle and parameters
+- `LooperAudioProcessorEditor`: Main plugin editor, hosts the LooperView
+- `Looper`: Core looping engine, manages multiple synchronized loops, recording, and playback
+- `LooperView`: UI component with all looper controls (buttons, sliders, displays)
+- Thread-safe communication between UI and audio threads via atomic flags
 
 ## Contributing
 
@@ -113,6 +130,7 @@ Source/
 - Check input/output routing in your DAW
 - Ensure proper sample rate settings
 - Verify buffer size settings are compatible
+- If experiencing feedback, turn OFF the Monitor button
 
 ### Build errors
 - Make sure all submodules are initialized
