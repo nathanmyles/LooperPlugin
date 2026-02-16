@@ -1,17 +1,12 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "Looper.h"
 
 class LooperAudioProcessor  : public juce::AudioProcessor,
                               public juce::Timer
 {
 public:
-    struct Loop {
-        juce::AudioBuffer<float> buffer;
-        int length = 0;
-        bool hasContent = false;
-    };
-
     LooperAudioProcessor();
     ~LooperAudioProcessor() override;
 
@@ -48,7 +43,7 @@ public:
     
 public:
     // Allow editor to access loop count for display
-    const std::vector<std::unique_ptr<Loop>>& getLoops() const { return loops; }
+    const std::vector<std::unique_ptr<Looper::Loop>>& getLoops() const { return looper.getLoops(); }
     
     // Thread-safe methods for UI actions
     void requestClearAll();
@@ -59,22 +54,8 @@ private:
     std::atomic<float>* recordParam = nullptr;
     std::atomic<float>* playParam = nullptr;
 
-    std::vector<std::unique_ptr<Loop>> loops;
-    int baseLoopLength = 0;
-    int recordingLoopIndex = -1;
-    std::atomic<int> writePosition;
-    std::atomic<int> readPosition;
-    bool isPlaying;
-    double currentSampleRate;
-    int maxLoopLength;
-    
-    std::atomic<bool> requestStopRecording { false };
-    std::atomic<bool> requestClear { false };
-    std::atomic<bool> requestUndo { false };
-
-    void stopRecording(int loopIndex);
-    void addNewLoop();
-    void removeLastLoop();
+    Looper looper;
+    double currentSampleRate = 44100.0;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     

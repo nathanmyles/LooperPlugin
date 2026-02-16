@@ -43,6 +43,8 @@ endif()
 
 target_sources(LooperPlugin
     PRIVATE
+        Source/Looper.cpp
+        Source/Looper.h
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
         Source/PluginEditor.cpp
