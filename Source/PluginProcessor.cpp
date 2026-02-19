@@ -16,13 +16,10 @@ LooperAudioProcessor::LooperAudioProcessor()
     recordParam = parameters.getRawParameterValue ("record");
     playParam = parameters.getRawParameterValue ("play");
     monitorParam = parameters.getRawParameterValue ("monitor");
-
-    startTimerHz(60);
 }
 
 LooperAudioProcessor::~LooperAudioProcessor()
 {
-    stopTimer();
 }
 
 const juce::String LooperAudioProcessor::getName() const
@@ -165,21 +162,6 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 
     looper.processPlayback(buffer, volume);
-}
-
-void LooperAudioProcessor::timerCallback()
-{
-    // Check if the looper requested to stop recording (e.g., hit base loop length)
-    // and reset the record button parameter
-    // Note: The Looper class manages its own requestStopRecording flag
-    // We check the looper's recording state via parameters
-    if (!looper.isRecording() && recordParam->load() > 0.5f)
-    {
-        // This handles the case where recording was stopped internally
-        // but the UI button is still "on"
-        // However, we need a way to know if it was stopped internally
-        // For now, we'll let the parameter change handle it
-    }
 }
 
 void LooperAudioProcessor::requestClearAll()

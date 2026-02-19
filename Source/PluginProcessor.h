@@ -3,8 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Looper.h"
 
-class LooperAudioProcessor  : public juce::AudioProcessor,
-                              public juce::Timer
+class LooperAudioProcessor  : public juce::AudioProcessor
 {
 public:
     LooperAudioProcessor();
@@ -59,9 +58,6 @@ private:
     double currentSampleRate = 44100.0;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-    // Timer callback for message thread updates
-    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LooperAudioProcessor)
 };
