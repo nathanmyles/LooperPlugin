@@ -42,6 +42,23 @@ This will build the plugin in the following formats:
 
 Install the plugin files to your DAW's plugin directory.
 
+### Testing
+
+The project uses Google Test (GTest) for unit testing.
+
+```bash
+cd build
+ctest
+```
+
+Or run the test executable directly:
+
+```bash
+./build/LooperPluginTests
+```
+
+Tests are located in the `Tests/` directory.
+
 ## Usage
 
 1. Load the LooperPlugin in your DAW
@@ -101,6 +118,10 @@ Source/
 ├── PluginEditor.h/cpp      # Main editor component
 ├── Looper.h/cpp            # Core looping logic and audio processing
 └── LooperView.h/cpp        # UI controls for the looper
+
+Tests/
+├── test_main.cpp           # Test runner
+└── test_looper.cpp         # Looper unit tests
 ```
 
 ### Architecture

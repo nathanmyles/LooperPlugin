@@ -68,3 +68,36 @@ target_link_libraries(LooperPlugin
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+# Testing
+enable_testing()
+
+CPMAddPackage(
+    NAME googletest
+    GITHUB_REPOSITORY google/googletest
+    GIT_TAG v1.15.2
+    VERSION 1.15.2
+    OPTIONS "INSTALL_GTEST OFF" "gtest_force_shared_crt"
+)
+
+add_executable(LooperPluginTests
+    Tests/test_main.cpp
+    Tests/test_looper.cpp
+)
+
+target_include_directories(LooperPluginTests
+    PRIVATE
+        ${LIB_DIR}/juce/modules
+)
+
+target_compile_features(LooperPluginTests PRIVATE cxx_std_17)
+
+target_link_libraries(LooperPluginTests
+    PRIVATE
+        gtest
+        gtest_main
+        LooperPlugin
+)
+
+include(GoogleTest)
+gtest_discover_tests(LooperPluginTests)

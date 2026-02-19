@@ -40,15 +40,15 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState parameters;
-    
+
 public:
     // Allow editor to access loop count for display
     const std::vector<std::unique_ptr<Looper::Loop>>& getLoops() const { return looper.getLoops(); }
-    
+
     // Thread-safe methods for UI actions
     void requestClearAll();
     void requestUndoLast();
-    
+
 private:
     std::atomic<float>* volumeParam = nullptr;
     std::atomic<float>* recordParam = nullptr;
@@ -59,7 +59,7 @@ private:
     double currentSampleRate = 44100.0;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    
+
     // Timer callback for message thread updates
     void timerCallback() override;
 
