@@ -1,16 +1,19 @@
 # LooperPlugin
 
-A multi-loop audio looper plugin built with the JUCE framework. Record multiple synchronized loops with automatic timing and layer them for rich, complex sounds.
+A multi-track audio looper plugin built with the JUCE framework. Record multiple synchronized loops across unlimited tracks, with each track supporting multiple overdubbed layers.
 
 ## Features
 
-- **Multi-Loop Recording**: Record up to 8 loops that automatically synchronize to the first loop
-- **Automatic Loop Length**: The first loop sets the base length; all subsequent loops are constrained to match
-- **Loop Synchronization**: Overdubs can be recorded at any position within the loop and maintain their timing
+- **Multi-Track Support**: Unlimited tracks that can be added and removed dynamically
+- **Multi-Loop Recording**: Each track supports multiple synchronized overdubs
+- **Automatic Loop Length**: The first loop sets the base length; all subsequent loops on all tracks sync to it
+- **Per-Track Controls**: Volume, Mute, Solo, and Record for each track
+- **Global Controls**: Play/Stop, Input Monitoring, Clear All, and Undo Last
+- **Solo Logic**: When any track is soloed, only soloed tracks play (standard DAW behavior)
 - **Input Monitoring**: Toggle to control whether input audio passes through to output (prevents feedback when using microphones)
-- **Undo**: Remove the last recorded loop individually
-- **Clear All**: Reset and start fresh
-- **Volume Control**: Adjust playback volume
+- **Undo**: Remove the last recorded loop globally or per-track
+- **Clear All**: Reset all tracks or clear individual tracks
+- **Volume Control**: Per-track volume sliders plus effective volume based on mute/solo state
 
 ## Requirements
 
@@ -24,6 +27,7 @@ A multi-loop audio looper plugin built with the JUCE framework. Record multiple 
 
 ```bash
 mkdir build
+
 cd build
 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 cmake --build .
@@ -40,7 +44,9 @@ This will build the plugin in the following formats:
 - **Windows**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
 - **Linux**: VST3 files will be in `build/LooperPlugin_artefacts/VST3`
 
-Install the plugin files to your DAW's plugin directory.
+The build system automatically installs plugins to the system directories:
+- **macOS AU**: `~/Library/Audio/Plug-Ins/Components/`
+- **macOS VST3**: `~/Library/Audio/Plug-Ins/VST3/`
 
 ### Testing
 
@@ -62,42 +68,57 @@ Tests are located in the `Tests/` directory.
 ## Usage
 
 1. Load the LooperPlugin in your DAW
-2. Click **Record** to start the base loop
-3. Click **Stop** (Record button changes to Stop) when done - this sets the loop length
-4. Click **Play** to start looping
-5. Click **Record** again to overdub additional loops - they will sync to the base loop
-6. Click **Undo** to remove the last recorded loop
-7. Use **Clear All** to remove all loops and start over
-8. Toggle **Monitor** to control input passthrough (OFF prevents feedback with microphones)
-9. Adjust the **Volume** slider to control playback level
+2. The plugin starts with one track. Click **+ Add Track** to add more tracks as needed
+3. Click the **REC** button on any track to start recording (only one track can record at a time)
+4. Click **REC** again to stop - this sets the loop length for all tracks
+5. Click **Play** in the top bar to start looping all tracks
+6. Record on other tracks to layer sounds - all tracks sync to the same loop length
+7. Use **Mute** (M) and **Solo** (S) buttons per-track to control which tracks play
+8. Adjust per-track **Volume** sliders to mix levels
+9. Use **Clear** on a track to remove all its loops, or **Undo** to remove the last loop
+10. Use **Clear All** in the top bar to clear all tracks at once
+11. Toggle **Monitor** to control input passthrough (OFF prevents feedback with microphones)
 
-### Controls
+### Global Controls (Top Bar)
 
-- **Monitor Button**: Toggles input monitoring. Blue when ON (input passes through), grey when OFF (input muted).
-- **Record Button**: Starts/stops recording. Red when recording, changes to "Stop".
-- **Play Button**: Starts/stops playback. Green when playing.
-- **Undo All Button**: Removes all recorded loops.
-- **Undo Button**: Removes the last recorded loop.
-- **Volume Slider**: Adjusts playback volume (0-100%).
-- **Loop Count**: Displays the number of recorded loops.
+- **Play Button**: Starts/stops playback for all tracks. Green when playing.
+- **Monitor Button**: Toggles input monitoring. Blue when ON (input passes through).
+- **Clear All Button**: Removes all loops from all tracks.
+- **Undo Last Button**: Removes the most recently recorded loop across all tracks.
 
-### Loop Behavior
+### Per-Track Controls
 
-- **First Loop**: Sets the base length for all subsequent loops
-- **Overdubs**: Can be recorded at any point in the loop cycle and maintain their position
-- **Synchronization**: All loops wrap at the same time, keeping everything in time
+Each track has the following controls (from top to bottom):
+
+- **Track Name**: Displayed at top (e.g., "Track 1")
+- **Volume Slider**: Vertical slider (0-100%) controlling track volume
+- **REC Button**: Toggle recording on/off. Red when recording.
+- **M Button**: Mute toggle. Orange when muted.
+- **S Button**: Solo toggle. Yellow when soloed.
+- **Clear Button**: Removes all loops from this track.
+- **Undo Button**: Removes the last loop from this track.
+- **X Button**: Removes this track entirely.
+- **Loop Count**: Shows number of recorded loops on this track.
+
+### Track Behavior
+
+- **Only One Track Records at a Time**: Starting recording on one track automatically stops recording on any other track
+- **Shared Loop Length**: All tracks share the same loop length, set by the first recorded loop
+- **Mute**: Silences a track entirely
+- **Solo**: When any track is soloed, only soloed (unmuted) tracks play
+- **Volume**: Effective volume considers both the slider and mute/solo state
 - **Maximum Length**: Up to 60 seconds per loop
 
 ## Plugin Parameters
 
 All parameters are automatable and can be controlled by your DAW:
 
-| Parameter | Range | Description |
-|-----------|-------|-------------|
-| Volume | 0.0-1.0 | Playback volume level |
-| Record | Boolean | Toggle recording on/off |
-| Play | Boolean | Toggle playback on/off |
-| Monitor | Boolean | Toggle input monitoring on/off |
+| Parameter |  Range   | Description                          |
+|-----------|----------|--------------------------------------|
+| Play      | Boolean  | Toggle playback on/off (all tracks)  |
+| Monitor   | Boolean  | Toggle input monitoring on/off       |
+
+Note: Per-track controls (volume, mute, solo, record) are managed internally and not exposed as DAW-automatable parameters.
 
 ## Technical Details
 
@@ -105,8 +126,9 @@ All parameters are automatable and can be controlled by your DAW:
 - **Buffer Size**: Optimized for real-time performance
 - **Channels**: Stereo input/output
 - **Latency**: Low latency design suitable for live performance
-- **Memory**: Circular buffers for efficient multi-loop storage
+- **Memory**: Circular buffers for efficient multi-loop storage per track
 - **Crossfade**: Automatic crossfading at loop boundaries to prevent clicks
+- **Thread-Safe**: UI and audio thread communication via atomic flags
 
 ## Development
 
@@ -114,22 +136,32 @@ The plugin is structured as follows:
 
 ```
 Source/
-├── PluginProcessor.h/cpp   # Audio processing engine (DAW interface)
-├── PluginEditor.h/cpp      # Main editor component
-├── Looper.h/cpp            # Core looping logic and audio processing
-└── LooperView.h/cpp        # UI controls for the looper
+├── PluginProcessor.h/cpp      # Audio processing engine (DAW interface)
+├── PluginEditor.h/cpp         # Main editor component
+├── Models/                    # Data models and business logic
+│   ├── Looper.h/cpp           # Core looping logic (per-track)
+│   ├── Track.h/cpp            # Track management (volume, mute, solo)
+│   └── TrackManager.h/cpp     # Shared timing across all tracks
+└── Views/                     # UI components
+    ├── TrackView.h/cpp        # UI for a single track
+    ├── TrackContainer.h/cpp   # Horizontal scrolling container for tracks
+    └── GlobalControlBar.h/cpp # Top-level play/monitor controls
 
 Tests/
-├── test_main.cpp           # Test runner
-└── test_looper.cpp         # Looper unit tests
+├── test_main.cpp              # Test runner
+└── test_looper.cpp            # Looper unit tests
 ```
 
 ### Architecture
 
-- `LooperAudioProcessor`: DAW interface, manages plugin lifecycle and parameters
-- `LooperAudioProcessorEditor`: Main plugin editor, hosts the LooperView
-- `Looper`: Core looping engine, manages multiple synchronized loops, recording, and playback
-- `LooperView`: UI component with all looper controls (buttons, sliders, displays)
+- `LooperAudioProcessor`: DAW interface, manages plugin lifecycle and global parameters
+- `LooperAudioProcessorEditor`: Main plugin editor, hosts TrackContainer and GlobalControlBar
+- `TrackManager`: Centralized timing management shared across all tracks
+- `Track`: Per-track audio processing with volume, mute, solo controls
+- `Looper`: Core looping engine per track, manages multiple synchronized loops
+- `TrackContainer`: Horizontal scrolling container managing all track views
+- `TrackView`: UI component for a single track (buttons, sliders, displays)
+- `GlobalControlBar`: Top-level controls for global play/monitor
 - Thread-safe communication between UI and audio threads via atomic flags
 
 ## Contributing

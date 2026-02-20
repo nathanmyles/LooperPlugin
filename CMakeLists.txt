@@ -43,14 +43,25 @@ endif()
 
 target_sources(LooperPlugin
     PRIVATE
-        Source/Looper.cpp
-        Source/Looper.h
-        Source/LooperView.cpp
-        Source/LooperView.h
+        # Main plugin files
         Source/PluginProcessor.cpp
         Source/PluginProcessor.h
         Source/PluginEditor.cpp
         Source/PluginEditor.h
+        # Models
+        Source/Models/Looper.cpp
+        Source/Models/Looper.h
+        Source/Models/TrackManager.cpp
+        Source/Models/TrackManager.h
+        Source/Models/Track.cpp
+        Source/Models/Track.h
+        # Views
+        Source/Views/TrackView.cpp
+        Source/Views/TrackView.h
+        Source/Views/TrackContainer.cpp
+        Source/Views/TrackContainer.h
+        Source/Views/GlobalControlBar.cpp
+        Source/Views/GlobalControlBar.h
 )
 
 target_compile_definitions(LooperPlugin

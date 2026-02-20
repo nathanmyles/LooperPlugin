@@ -1,7 +1,8 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "Looper.h"
+#include "Models/TrackManager.h"
+#include "Models/Track.h"
 
 class LooperAudioProcessor  : public juce::AudioProcessor
 {
@@ -41,21 +42,49 @@ public:
     juce::AudioProcessorValueTreeState parameters;
 
 public:
-    // Allow editor to access loop count for display
-    const std::vector<std::unique_ptr<Looper::Loop>>& getLoops() const { return looper.getLoops(); }
+    // Track management for editor
+    Track* addTrack();
+    void removeTrack(int trackId);
+    void removeAllTracks();
+    std::vector<std::unique_ptr<Track>>& getTracks() { return tracks; }
+    Track* findTrack(int trackId);
+    int getTrackCount() const { return static_cast<int>(tracks.size()); }
 
-    // Thread-safe methods for UI actions
+    // Track controls
+    void startRecordingTrack(int trackId);
+    void stopRecordingTrack(int trackId);
+    void stopAllRecording();
+    void clearTrack(int trackId);
+    void undoTrack(int trackId);
+
+    // Global controls
     void requestClearAll();
     void requestUndoLast();
+    void startPlayback();
+    void stopPlayback();
+    bool isPlaying() const { return isPlayingState; }
+
+    // Solo logic
+    bool isAnyTrackSoloed() const;
+
+    // Access to track manager
+    TrackManager& getTrackManager() { return trackManager; }
 
 private:
-    std::atomic<float>* volumeParam = nullptr;
-    std::atomic<float>* recordParam = nullptr;
     std::atomic<float>* playParam = nullptr;
     std::atomic<float>* monitorParam = nullptr;
 
-    Looper looper;
+    // Core components
+    TrackManager trackManager;
+    std::vector<std::unique_ptr<Track>> tracks;
+
+    // State
     double currentSampleRate = 44100.0;
+    bool isPlayingState = false;
+    int nextTrackId = 0;
+
+    // Helper for finding which track has the most recent loop (for undo)
+    Track* findTrackWithMostRecentLoop() const;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

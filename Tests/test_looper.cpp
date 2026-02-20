@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../Source/Looper.h"
+#include "../Source/Models/Looper.h"
 
 TEST(LooperTest, InitialStateIsEmpty) {
     Looper looper;
