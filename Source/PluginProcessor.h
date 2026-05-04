@@ -67,6 +67,9 @@ public:
     // Solo logic
     bool isAnyTrackSoloed() const;
 
+    // Recording
+    void toggleLastTrackRecording();
+
     // Access to track manager
     TrackManager& getTrackManager() { return trackManager; }
 

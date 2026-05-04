@@ -27,7 +27,8 @@ private:
     void setupCallbacks();
     void addInitialTrack();
     void updateTrackButtons();
-    void syncTracksWithProcessor();  // Sync UI track views with processor's tracks
+    void syncTracksWithProcessor();
+    bool keyPressed(const juce::KeyPress& key) override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LooperAudioProcessorEditor)
 };

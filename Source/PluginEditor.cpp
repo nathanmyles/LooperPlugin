@@ -157,6 +157,17 @@ void LooperAudioProcessorEditor::updateTrackButtons()
     controlBar.setLoopInfo(audioProcessor.getTrackCount(), totalLoops);
 }
 
+bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
+{
+    if (key == juce::KeyPress('r') || key == juce::KeyPress('R'))
+    {
+        audioProcessor.toggleLastTrackRecording();
+        updateTrackButtons();
+        return true;
+    }
+    return false;
+}
+
 void LooperAudioProcessorEditor::timerCallback()
 {
     // Update loop counts in track views

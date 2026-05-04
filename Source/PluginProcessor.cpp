@@ -357,6 +357,22 @@ bool LooperAudioProcessor::isAnyTrackSoloed() const
     return false;
 }
 
+void LooperAudioProcessor::toggleLastTrackRecording()
+{
+    if (tracks.empty())
+        return;
+
+    auto& lastTrack = tracks.back();
+    if (lastTrack->isRecording())
+    {
+        stopAllRecording();
+    }
+    else
+    {
+        startRecordingTrack(lastTrack->getId());
+    }
+}
+
 Track* LooperAudioProcessor::findTrackWithMostRecentLoop() const
 {
     // For simplicity, find the track with the most loops
