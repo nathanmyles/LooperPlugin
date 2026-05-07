@@ -2,7 +2,8 @@
 
 #include <atomic>
 #include "Looper.h"
-#include "TrackManager.h"
+
+class TrackManager;
 
 /**
  * Track - A single track in the multi-track looper

@@ -1,4 +1,5 @@
 #include "Track.h"
+#include "TrackManager.h"
 
 Track::Track(int id, TrackManager& tm)
     : trackId(id), trackManager(tm)

@@ -41,34 +41,33 @@ public:
 
     juce::AudioProcessorValueTreeState parameters;
 
-public:
-    // Track management for editor
-    Track* addTrack();
-    void removeTrack(int trackId);
-    void removeAllTracks();
-    std::vector<std::unique_ptr<Track>>& getTracks() { return tracks; }
-    Track* findTrack(int trackId);
-    int getTrackCount() const { return static_cast<int>(tracks.size()); }
+    // Track management for editor (delegated to TrackManager)
+    Track* addTrack() { return trackManager.addTrack(); }
+    void removeTrack(int trackId) { trackManager.removeTrack(trackId); }
+    void removeAllTracks() { trackManager.removeAllTracks(); }
+    std::vector<std::unique_ptr<Track>>& getTracks() { return trackManager.getTracks(); }
+    Track* findTrack(int trackId) { return trackManager.findTrack(trackId); }
+    int getTrackCount() const { return trackManager.getTrackCount(); }
 
-    // Track controls
+    // Track controls (delegated to TrackManager)
     void startRecordingTrack(int trackId);
-    void stopRecordingTrack(int trackId);
-    void stopAllRecording();
-    void clearTrack(int trackId);
-    void undoTrack(int trackId);
+    void stopRecordingTrack(int trackId) { trackManager.stopRecordingTrack(trackId); }
+    void stopAllRecording() { trackManager.stopAllRecording(); }
+    void clearTrack(int trackId) { trackManager.clearTrack(trackId); }
+    void undoTrack(int trackId) { trackManager.undoTrack(trackId); }
 
-    // Global controls
-    void requestClearAll();
-    void requestUndoLast();
-    void startPlayback();
-    void stopPlayback();
-    bool isPlaying() const { return isPlayingState; }
+    // Global controls (delegated to TrackManager)
+    void requestClearAll() { trackManager.requestClearAll(); }
+    void requestUndoLast() { trackManager.requestUndoLast(); }
+    void startPlayback() { trackManager.startPlayback(); }
+    void stopPlayback() { trackManager.stopPlayback(); }
+    bool isPlaying() const { return trackManager.isPlaying(); }
 
-    // Solo logic
-    bool isAnyTrackSoloed() const;
+    // Solo logic (delegated to TrackManager)
+    bool isAnyTrackSoloed() const { return trackManager.isAnyTrackSoloed(); }
 
-    // Recording
-    void toggleLastTrackRecording();
+    // Recording (delegated to TrackManager)
+    void toggleLastTrackRecording() { trackManager.toggleLastTrackRecording(); }
 
     // Access to track manager
     TrackManager& getTrackManager() { return trackManager; }
@@ -79,15 +78,9 @@ private:
 
     // Core components
     TrackManager trackManager;
-    std::vector<std::unique_ptr<Track>> tracks;
 
     // State
     double currentSampleRate = 44100.0;
-    bool isPlayingState = false;
-    int nextTrackId = 0;
-
-    // Helper for finding which track has the most recent loop (for undo)
-    Track* findTrackWithMostRecentLoop() const;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

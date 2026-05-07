@@ -1,13 +1,23 @@
 #pragma once
 
 #include <atomic>
+#include <vector>
+#include <memory>
+#include <algorithm>
 #include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_data_structures/juce_data_structures.h>
+
+class Track;
 
 /**
- * TrackManager - Centralized timing management for multi-track looper
+ * TrackManager - Centralized management for multi-track looper
  *
- * Manages the shared base loop length and read position that all tracks
- * synchronize to. Ensures all tracks stay locked together.
+ * Manages the collection of tracks and shared timing:
+ * - Base loop length and read position that all tracks synchronize to
+ * - Track lifecycle (add, remove, find)
+ * - Recording/playback controls across all tracks
+ * - Audio processing for all tracks
  */
 class TrackManager
 {
@@ -39,12 +49,54 @@ public:
     // Get max loop duration in samples (e.g., 60 seconds)
     int getMaxLoopLength() const { return maxLoopLength; }
 
+    // Track management
+    Track* addTrack();
+    void removeTrack(int trackId);
+    void removeAllTracks();
+    std::vector<std::unique_ptr<Track>>& getTracks() { return tracks; }
+    const std::vector<std::unique_ptr<Track>>& getTracks() const { return tracks; }
+    Track* findTrack(int trackId);
+    int getTrackCount() const { return static_cast<int>(tracks.size()); }
+
+    // Track controls
+    bool startRecordingTrack(int trackId);
+    void stopRecordingTrack(int trackId);
+    void stopAllRecording();
+    void clearTrack(int trackId);
+    void undoTrack(int trackId);
+
+    // Global controls
+    void requestClearAll();
+    void requestUndoLast();
+    void startPlayback();
+    void stopPlayback();
+    bool isPlaying() const { return playing.load(); }
+
+    // Solo logic
+    bool isAnyTrackSoloed() const;
+
+    // Recording
+    void toggleLastTrackRecording();
+
+    // Audio processing
+    void processBlock(juce::AudioBuffer<float>& buffer, bool shouldMonitor);
+
+    // State serialization
+    void getState(juce::ValueTree& state, double sampleRate) const;
+    void setState(const juce::ValueTree& state, double sampleRate);
+
 private:
     std::atomic<int> baseLoopLength{0};
     std::atomic<int> readPosition{0};
 
     double currentSampleRate = 44100.0;
     int maxLoopLength = 44100 * 60;
+
+    std::vector<std::unique_ptr<Track>> tracks;
+    std::atomic<bool> playing{false};
+    int nextTrackId = 0;
+
+    Track* findTrackWithMostRecentLoop() const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackManager)
 };

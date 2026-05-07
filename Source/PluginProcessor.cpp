@@ -88,12 +88,6 @@ void LooperAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     juce::ignoreUnused(samplesPerBlock);
     currentSampleRate = sampleRate;
     trackManager.prepare(sampleRate);
-
-    // Prepare all existing tracks
-    for (auto& track : tracks)
-    {
-        track->prepare(sampleRate);
-    }
 }
 
 void LooperAudioProcessor::releaseResources()
@@ -126,271 +120,29 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused (midiMessages);
 
-    // Handle pending requests for all tracks
-    for (auto& track : tracks)
-    {
-        track->handlePendingRequests();
-    }
-
     const auto shouldPlay = playParam->load() > 0.5f;
     const auto shouldMonitor = monitorParam->load() > 0.5f;
 
     // Handle global play state
-    if (shouldPlay && !isPlayingState)
+    if (shouldPlay && !trackManager.isPlaying())
     {
-        startPlayback();
+        trackManager.startPlayback();
     }
-    else if (!shouldPlay && isPlayingState)
+    else if (!shouldPlay && trackManager.isPlaying())
     {
-        stopPlayback();
-    }
-
-    // Check if any track is soloed
-    bool anySoloed = isAnyTrackSoloed();
-
-    // Process each track
-    // First, handle recording for any track that's currently recording
-    for (auto& track : tracks)
-    {
-        if (track->isRecording())
-        {
-            track->getLooper().processRecording(buffer);
-        }
+        trackManager.stopPlayback();
     }
 
-    // If not monitoring, clear the buffer before mixing
-    if (!shouldMonitor)
-    {
-        buffer.clear();
-    }
-
-    // Mix all track outputs
-    for (auto& track : tracks)
-    {
-        if (track->shouldOutput(anySoloed))
-        {
-            float effectiveVolume = track->getEffectiveVolume(anySoloed);
-            track->getLooper().processPlayback(buffer, effectiveVolume);
-        }
-    }
-
-    // Update time manager read position for synchronized playback
-    if (isPlayingState && trackManager.hasBaseLoopLength())
-    {
-        trackManager.incrementReadPosition(buffer.getNumSamples());
-    }
+    trackManager.processBlock(buffer, shouldMonitor);
 }
-
-// Track Management
-
-Track* LooperAudioProcessor::addTrack()
-{
-    auto track = std::make_unique<Track>(nextTrackId++, trackManager);
-    track->prepare(currentSampleRate);
-
-    // If we already have a base loop length, sync this track to it
-    if (trackManager.hasBaseLoopLength())
-    {
-        // Track will sync to the existing base length when it starts recording
-    }
-
-    Track* trackPtr = track.get();
-    tracks.push_back(std::move(track));
-    return trackPtr;
-}
-
-void LooperAudioProcessor::removeTrack(int trackId)
-{
-    auto it = std::find_if(tracks.begin(), tracks.end(),
-        [trackId](const std::unique_ptr<Track>& t) { return t->getId() == trackId; });
-
-    if (it != tracks.end())
-    {
-        // If this was the last track with loops, reset the base loop length
-        tracks.erase(it);
-
-        // Check if any tracks still have content
-        bool hasContent = false;
-        for (const auto& track : tracks)
-        {
-            if (!track->getLooper().getLoops().empty())
-            {
-                hasContent = true;
-                break;
-            }
-        }
-
-        if (!hasContent)
-        {
-            trackManager.resetBaseLoopLength();
-        }
-    }
-}
-
-void LooperAudioProcessor::removeAllTracks()
-{
-    tracks.clear();
-    trackManager.resetBaseLoopLength();
-    nextTrackId = 0;
-}
-
-Track* LooperAudioProcessor::findTrack(int trackId)
-{
-    auto it = std::find_if(tracks.begin(), tracks.end(),
-        [trackId](const std::unique_ptr<Track>& t) { return t->getId() == trackId; });
-
-    return (it != tracks.end()) ? it->get() : nullptr;
-}
-
-// Track Controls
 
 void LooperAudioProcessor::startRecordingTrack(int trackId)
 {
-    Track* track = findTrack(trackId);
-    if (track != nullptr)
+    bool autoStarted = trackManager.startRecordingTrack(trackId);
+    if (autoStarted)
     {
-        // Stop any other track that's recording (only one at a time)
-        stopAllRecording();
-
-        track->startRecording();
-
-        // Auto-start playback if not already playing
-        if (!isPlayingState)
-        {
-            parameters.getParameter("play")->setValueNotifyingHost(1.0f);
-        }
+        parameters.getParameter("play")->setValueNotifyingHost(1.0f);
     }
-}
-
-void LooperAudioProcessor::stopRecordingTrack(int trackId)
-{
-    Track* track = findTrack(trackId);
-    if (track != nullptr)
-    {
-        track->stopRecording();
-
-        // If this track set the base loop length, sync all tracks
-        if (trackManager.getBaseLoopLength() == 0 && track->getLooper().getBaseLoopLength() > 0)
-        {
-            trackManager.setBaseLoopLength(track->getLooper().getBaseLoopLength());
-        }
-    }
-}
-
-void LooperAudioProcessor::stopAllRecording()
-{
-    for (auto& track : tracks)
-    {
-        if (track->isRecording())
-        {
-            track->stopRecording();
-        }
-    }
-}
-
-void LooperAudioProcessor::clearTrack(int trackId)
-{
-    Track* track = findTrack(trackId);
-    if (track != nullptr)
-    {
-        track->requestClearAll();
-    }
-}
-
-void LooperAudioProcessor::undoTrack(int trackId)
-{
-    Track* track = findTrack(trackId);
-    if (track != nullptr)
-    {
-        track->requestUndoLast();
-    }
-}
-
-// Global Controls
-
-void LooperAudioProcessor::requestClearAll()
-{
-    for (auto& track : tracks)
-    {
-        track->requestClearAll();
-    }
-    trackManager.resetBaseLoopLength();
-}
-
-void LooperAudioProcessor::requestUndoLast()
-{
-    // Find the track with the most recent loop and undo it
-    Track* track = findTrackWithMostRecentLoop();
-    if (track != nullptr)
-    {
-        track->requestUndoLast();
-    }
-}
-
-void LooperAudioProcessor::startPlayback()
-{
-    isPlayingState = true;
-    for (auto& track : tracks)
-    {
-        track->startPlayback();
-    }
-}
-
-void LooperAudioProcessor::stopPlayback()
-{
-    isPlayingState = false;
-    for (auto& track : tracks)
-    {
-        track->stopPlayback();
-    }
-}
-
-bool LooperAudioProcessor::isAnyTrackSoloed() const
-{
-    for (const auto& track : tracks)
-    {
-        if (track->isSoloed())
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-void LooperAudioProcessor::toggleLastTrackRecording()
-{
-    if (tracks.empty())
-        return;
-
-    auto& lastTrack = tracks.back();
-    if (lastTrack->isRecording())
-    {
-        stopAllRecording();
-    }
-    else
-    {
-        startRecordingTrack(lastTrack->getId());
-    }
-}
-
-Track* LooperAudioProcessor::findTrackWithMostRecentLoop() const
-{
-    // For simplicity, find the track with the most loops
-    // In a more sophisticated version, we'd track timestamps
-    Track* result = nullptr;
-    size_t maxLoops = 0;
-
-    for (const auto& track : tracks)
-    {
-        size_t loopCount = track->getLooper().getLoops().size();
-        if (loopCount > maxLoops)
-        {
-            maxLoops = loopCount;
-            result = track.get();
-        }
-    }
-
-    return result;
 }
 
 bool LooperAudioProcessor::hasEditor() const
@@ -407,24 +159,7 @@ void LooperAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::ValueTree state = parameters.copyState();
 
-    // Save time manager state
-    state.setProperty("baseLoopLength", trackManager.getBaseLoopLength(), nullptr);
-    state.setProperty("trackCount", static_cast<int>(tracks.size()), nullptr);
-
-    // Save each track's state
-    for (size_t i = 0; i < tracks.size(); ++i)
-    {
-        juce::ValueTree trackState("Track" + juce::String(i));
-        trackState.setProperty("trackId", tracks[i]->getId(), nullptr);
-        trackState.setProperty("volume", tracks[i]->getVolume(), nullptr);
-        trackState.setProperty("muted", tracks[i]->isMuted(), nullptr);
-        trackState.setProperty("soloed", tracks[i]->isSoloed(), nullptr);
-
-        // Save looper state
-        tracks[i]->getLooper().getState(trackState, currentSampleRate);
-
-        state.addChild(trackState, -1, nullptr);
-    }
+    trackManager.getState(state, currentSampleRate);
 
     juce::MemoryOutputStream stream (destData, true);
     state.writeToStream (stream);
@@ -437,44 +172,7 @@ void LooperAudioProcessor::setStateInformation (const void* data, int sizeInByte
     {
         parameters.replaceState (state);
 
-        // Restore time manager
-        int baseLength = state.getProperty("baseLoopLength", 0);
-        if (baseLength > 0)
-        {
-            trackManager.setBaseLoopLength(baseLength);
-        }
-
-        // Clear existing tracks
-        tracks.clear();
-
-        // Restore tracks
-        int trackCount = state.getProperty("trackCount", 0);
-        for (int i = 0; i < trackCount; ++i)
-        {
-            juce::ValueTree trackState = state.getChildWithName("Track" + juce::String(i));
-            if (trackState.isValid())
-            {
-                int trackId = trackState.getProperty("trackId", i);
-                auto track = std::make_unique<Track>(trackId, trackManager);
-                track->prepare(currentSampleRate);
-
-                // Restore track properties
-                track->setVolume(trackState.getProperty("volume", 0.7f));
-                track->setMuted(trackState.getProperty("muted", false));
-                track->setSoloed(trackState.getProperty("soloed", false));
-
-                // Restore looper state
-                track->getLooper().setState(trackState, currentSampleRate);
-
-                tracks.push_back(std::move(track));
-
-                // Update nextTrackId to be higher than any existing track
-                if (trackId >= nextTrackId)
-                {
-                    nextTrackId = trackId + 1;
-                }
-            }
-        }
+        trackManager.setState(state, currentSampleRate);
     }
 }
 
