@@ -73,6 +73,13 @@ void TrackContainer::addTrackView(Track* track)
         }
     };
 
+    trackView->onPlayClicked = [this](int trackId, bool isPlaying) {
+        if (onPlayTrack)
+        {
+            onPlayTrack(trackId, isPlaying);
+        }
+    };
+
     trackView->onClearTrack = [this](int trackId) {
         if (onClearTrack)
         {
@@ -112,7 +119,7 @@ void TrackContainer::refreshTrackViews()
 {
     for (auto& trackView : trackList.getTrackViews())
     {
-        trackView->refreshLoopCount();
+        trackView->updateFromTrack();
     }
 }
 

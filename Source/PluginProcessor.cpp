@@ -120,18 +120,7 @@ void LooperAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused (midiMessages);
 
-    const auto shouldPlay = playParam->load() > 0.5f;
     const auto shouldMonitor = monitorParam->load() > 0.5f;
-
-    // Handle global play state
-    if (shouldPlay && !trackManager.isPlaying())
-    {
-        trackManager.startPlayback();
-    }
-    else if (!shouldPlay && trackManager.isPlaying())
-    {
-        trackManager.stopPlayback();
-    }
 
     trackManager.processBlock(buffer, shouldMonitor);
 }

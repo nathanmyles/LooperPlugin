@@ -90,6 +90,20 @@ void LooperAudioProcessorEditor::setupCallbacks()
         {
             audioProcessor.stopRecordingTrack(trackId);
         }
+        trackContainer.refreshTrackViews();
+        updateTrackButtons();
+    };
+
+    trackContainer.onPlayTrack = [this](int trackId, bool isPlaying) {
+        if (isPlaying)
+        {
+            audioProcessor.startPlaybackTrack(trackId);
+        }
+        else
+        {
+            audioProcessor.stopPlaybackTrack(trackId);
+        }
+        trackContainer.refreshTrackViews();
         updateTrackButtons();
     };
 
@@ -136,16 +150,20 @@ void LooperAudioProcessorEditor::syncTracksWithProcessor()
 
 void LooperAudioProcessorEditor::updateTrackButtons()
 {
-    // Enable/disable record buttons based on recording state
-    // Only one track can record at a time
-    bool anyRecording = false;
+    bool anyPlaying = false;
     for (auto& track : audioProcessor.getTracks())
     {
-        if (track->isRecording())
-        {
-            anyRecording = true;
-            break;
-        }
+        if (track->isPlaying())
+            anyPlaying = true;
+    }
+
+    auto* playParam = audioProcessor.parameters.getParameter("play");
+    if (playParam)
+    {
+        float current = playParam->getValue();
+        float target = anyPlaying ? 1.0f : 0.0f;
+        if (std::abs(current - target) > 0.01f)
+            playParam->setValueNotifyingHost(target);
     }
 
     // Update control bar info
@@ -162,6 +180,7 @@ bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress& key)
     if (key == juce::KeyPress('r') || key == juce::KeyPress('R'))
     {
         audioProcessor.toggleLastTrackRecording();
+        trackContainer.refreshTrackViews();
         updateTrackButtons();
         return true;
     }

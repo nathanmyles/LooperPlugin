@@ -22,6 +22,7 @@ public:
     std::function<void()> onAddTrack;
     std::function<void(int)> onRemoveTrack;
     std::function<void(int, bool)> onRecordTrack;
+    std::function<void(int, bool)> onPlayTrack;
     std::function<void(int)> onClearTrack;
     std::function<void(int)> onUndoTrack;
     std::function<void()> onRefreshUI;

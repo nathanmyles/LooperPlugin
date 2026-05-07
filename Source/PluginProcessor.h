@@ -53,6 +53,8 @@ public:
     void startRecordingTrack(int trackId);
     void stopRecordingTrack(int trackId) { trackManager.stopRecordingTrack(trackId); }
     void stopAllRecording() { trackManager.stopAllRecording(); }
+    void startPlaybackTrack(int trackId) { trackManager.startPlaybackTrack(trackId); }
+    void stopPlaybackTrack(int trackId) { trackManager.stopPlaybackTrack(trackId); }
     void clearTrack(int trackId) { trackManager.clearTrack(trackId); }
     void undoTrack(int trackId) { trackManager.undoTrack(trackId); }
 

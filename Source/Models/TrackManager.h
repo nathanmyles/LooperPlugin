@@ -62,6 +62,8 @@ public:
     bool startRecordingTrack(int trackId);
     void stopRecordingTrack(int trackId);
     void stopAllRecording();
+    void startPlaybackTrack(int trackId);
+    void stopPlaybackTrack(int trackId);
     void clearTrack(int trackId);
     void undoTrack(int trackId);
 
@@ -70,7 +72,7 @@ public:
     void requestUndoLast();
     void startPlayback();
     void stopPlayback();
-    bool isPlaying() const { return playing.load(); }
+    bool isPlaying() const;
 
     // Solo logic
     bool isAnyTrackSoloed() const;
@@ -93,7 +95,6 @@ private:
     int maxLoopLength = 44100 * 60;
 
     std::vector<std::unique_ptr<Track>> tracks;
-    std::atomic<bool> playing{false};
     int nextTrackId = 0;
 
     Track* findTrackWithMostRecentLoop() const;

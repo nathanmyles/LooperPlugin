@@ -22,6 +22,7 @@ public:
     // Callbacks
     std::function<void(int)> onRemoveTrack;
     std::function<void(int, bool)> onRecordClicked;
+    std::function<void(int, bool)> onPlayClicked;
     std::function<void(int)> onClearTrack;
     std::function<void(int)> onUndoTrack;
 
@@ -36,6 +37,9 @@ public:
 
     // Refresh the loop count display
     void refreshLoopCount();
+
+    // Update button styles to reflect current state
+    void updateButtonStyles();
 
     int getTrackId() const { return trackId; }
 
@@ -53,15 +57,13 @@ private:
     juce::TextButton undoButton;
     juce::TextButton removeButton;
     juce::Label loopCountLabel;
-    juce::Label statusLabel;
+    juce::TextButton playButton;
 
     // State tracking
     bool wasRecording = false;
     int lastLoopCount = 0;
 
     void setupComponents();
-    void updateButtonStyles();
-    void updateStatusLabel();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackView)
 };

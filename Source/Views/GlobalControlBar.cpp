@@ -25,12 +25,12 @@ void GlobalControlBar::setupComponents()
     addAndMakeVisible(titleLabel);
 
     // Play button (attached to parameter)
-    playButton.setButtonText("Play");
     playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
     playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::green);
     playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
     playButton.setClickingTogglesState(true);
     playAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(parameters, "play", playButton);
+    playButton.setButtonText("Play All");
     playButton.onClick = [this]() {
         if (onPlayChanged)
             onPlayChanged(playButton.getToggleState());

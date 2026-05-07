@@ -41,6 +41,18 @@ void TrackView::setupComponents()
     };
     addAndMakeVisible(recordButton);
 
+    // Play button
+    playButton.setButtonText("Play");
+    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
+    playButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::green);
+    playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    playButton.setClickingTogglesState(true);
+    playButton.onClick = [this]() {
+        if (onPlayClicked)
+            onPlayClicked(trackId, playButton.getToggleState());
+    };
+    addAndMakeVisible(playButton);
+
     // Mute button
     muteButton.setButtonText("M");
     muteButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
@@ -98,11 +110,6 @@ void TrackView::setupComponents()
     loopCountLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(loopCountLabel);
 
-    // Status label
-    statusLabel.setText("Ready", juce::dontSendNotification);
-    statusLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(statusLabel);
-
     updateButtonStyles();
 }
 
@@ -148,6 +155,10 @@ void TrackView::resized()
     recordButton.setBounds(bounds.removeFromTop(buttonHeight));
     bounds.removeFromTop(5);
 
+    // Play button
+    playButton.setBounds(bounds.removeFromTop(buttonHeight));
+    bounds.removeFromTop(5);
+
     // Mute and Solo buttons side by side
     auto muteSoloRow = bounds.removeFromTop(buttonHeight);
     muteButton.setBounds(muteSoloRow.removeFromLeft(muteSoloRow.getWidth() / 2 - 2));
@@ -162,10 +173,6 @@ void TrackView::resized()
 
     // Loop count
     loopCountLabel.setBounds(bounds.removeFromTop(labelHeight));
-    bounds.removeFromTop(5);
-
-    // Status label at bottom
-    statusLabel.setBounds(bounds.removeFromTop(labelHeight));
 }
 
 void TrackView::updateFromTrack()
@@ -174,6 +181,8 @@ void TrackView::updateFromTrack()
     volumeSlider.setValue(track.getVolume(), juce::dontSendNotification);
     muteButton.setToggleState(track.isMuted(), juce::dontSendNotification);
     soloButton.setToggleState(track.isSoloed(), juce::dontSendNotification);
+    recordButton.setToggleState(track.isRecording(), juce::dontSendNotification);
+    playButton.setToggleState(track.isPlaying(), juce::dontSendNotification);
 
     updateButtonStyles();
     refreshLoopCount();
@@ -187,26 +196,13 @@ void TrackView::refreshLoopCount()
 
 void TrackView::updateButtonStyles()
 {
-    // Button colors are handled automatically by JUCE via buttonOnColourId
-    // Just update the status label
-    updateStatusLabel();
-}
+    bool playing = track.isPlaying();
+    playButton.setButtonText(playing ? "Stop" : "Play");
+    playButton.setToggleState(playing, juce::dontSendNotification);
 
-void TrackView::updateStatusLabel()
-{
-    if (track.isRecording())
-    {
-        statusLabel.setText("Recording...", juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, juce::Colours::red);
-    }
-    else if (track.isPlaying())
-    {
-        statusLabel.setText("Playing", juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, juce::Colours::green);
-    }
-    else
-    {
-        statusLabel.setText("Ready", juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    }
+    bool recording = track.isRecording();
+    recordButton.setToggleState(recording, juce::dontSendNotification);
+    recordButton.repaint();
+
+    repaint();
 }

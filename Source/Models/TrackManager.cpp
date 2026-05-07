@@ -131,10 +131,9 @@ bool TrackManager::startRecordingTrack(int trackId)
 
         track->startRecording();
 
-        // Auto-start playback if not already playing
-        if (!playing.load())
+        if (!track->isPlaying())
         {
-            startPlayback();
+            startPlaybackTrack(trackId);
             return true;
         }
     }
@@ -158,6 +157,24 @@ void TrackManager::stopAllRecording()
         {
             track->stopRecording();
         }
+    }
+}
+
+void TrackManager::startPlaybackTrack(int trackId)
+{
+    Track* track = findTrack(trackId);
+    if (track != nullptr)
+    {
+        track->startPlayback();
+    }
+}
+
+void TrackManager::stopPlaybackTrack(int trackId)
+{
+    Track* track = findTrack(trackId);
+    if (track != nullptr)
+    {
+        track->stopPlayback();
     }
 }
 
@@ -202,7 +219,6 @@ void TrackManager::requestUndoLast()
 
 void TrackManager::startPlayback()
 {
-    playing.store(true);
     for (auto& track : tracks)
     {
         track->startPlayback();
@@ -211,11 +227,22 @@ void TrackManager::startPlayback()
 
 void TrackManager::stopPlayback()
 {
-    playing.store(false);
     for (auto& track : tracks)
     {
         track->stopPlayback();
     }
+}
+
+bool TrackManager::isPlaying() const
+{
+    for (const auto& track : tracks)
+    {
+        if (track->isPlaying())
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool TrackManager::isAnyTrackSoloed() const
@@ -283,7 +310,7 @@ void TrackManager::processBlock(juce::AudioBuffer<float>& buffer, bool shouldMon
     }
 
     // Update time manager read position for synchronized playback
-    if (playing.load() && hasBaseLoopLength())
+    if (isPlaying() && hasBaseLoopLength())
     {
         incrementReadPosition(buffer.getNumSamples());
     }
