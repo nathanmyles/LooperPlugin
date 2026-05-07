@@ -21,21 +21,11 @@
       "target": "/home/vscode/.local/share/opencode/auth.json",
       "type": "bind"
     },
-   {
-      "source": "${localEnv:HOME}/.local/share/opencode/storage",
-      "target": "/home/vscode/.local/share/opencode/storage",
-      "type": "bind"
-    },
-    {
-      "source": "${localEnv:HOME}/.config/opencode",
-      "target": "/home/vscode/.config/opencode",
-      "type": "bind"
-    },
     {
       "source": "looper-build",
       "target": "${containerWorkspaceFolder}/build",
       "type": "volume"
     }
   ],
-  "postCreateCommand": "sudo chown -R vscode:vscode ${containerWorkspaceFolder}/build"
+  "postCreateCommand": "bash .devcontainer/postcreate.sh"
 }
