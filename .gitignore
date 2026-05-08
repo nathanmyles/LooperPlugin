@@ -3,3 +3,4 @@ build-macos
 cmake-build-debug
 Libraries
 .cache
+compile_commands.json

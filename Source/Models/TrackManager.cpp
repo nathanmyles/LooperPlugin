@@ -184,6 +184,22 @@ void TrackManager::clearTrack(int trackId)
     if (track != nullptr)
     {
         track->requestClearAll();
+
+        // Check if any tracks still have content
+        bool hasContent = false;
+        for (const auto& t : tracks)
+        {
+            if (!t->getLooper().getLoops().empty())
+            {
+                hasContent = true;
+                break;
+            }
+        }
+
+        if (!hasContent)
+        {
+            resetBaseLoopLength();
+        }
     }
 }
 
@@ -205,6 +221,7 @@ void TrackManager::requestClearAll()
         track->requestClearAll();
     }
     resetBaseLoopLength();
+    resetReadPosition();
 }
 
 void TrackManager::requestUndoLast()
@@ -300,12 +317,13 @@ void TrackManager::processBlock(juce::AudioBuffer<float>& buffer, bool shouldMon
     }
 
     // Mix all track outputs
+    int currentReadPos = getWrappedReadPosition();
     for (auto& track : tracks)
     {
         if (track->shouldOutput(anySoloed))
         {
             float effectiveVolume = track->getEffectiveVolume(anySoloed);
-            track->getLooper().processPlayback(buffer, effectiveVolume);
+            track->getLooper().processPlayback(buffer, effectiveVolume, currentReadPos);
         }
     }
 

@@ -21,7 +21,7 @@ void Looper::prepare(double sampleRate)
     playing = false;
 }
 
-void Looper::startRecording()
+void Looper::startRecording(int currentReadPosition)
 {
     addNewLoop();
     recordingLoopIndex = static_cast<int>(loops.size()) - 1;
@@ -30,7 +30,7 @@ void Looper::startRecording()
     // This is where in the base loop the overdub will be placed
     if (baseLoopLength > 0)
     {
-        loops[recordingLoopIndex]->startOffset = readPosition.load() % baseLoopLength;
+        loops[recordingLoopIndex]->startOffset = currentReadPosition % baseLoopLength;
     }
     else
     {
@@ -152,7 +152,7 @@ void Looper::processRecording(const juce::AudioBuffer<float>& inputBuffer)
     }
 }
 
-void Looper::processPlayback(juce::AudioBuffer<float>& outputBuffer, float volume)
+void Looper::processPlayback(juce::AudioBuffer<float>& outputBuffer, float volume, int sharedReadPosition)
 {
     if (!playing || loops.empty())
         return;
@@ -161,12 +161,11 @@ void Looper::processPlayback(juce::AudioBuffer<float>& outputBuffer, float volum
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Wrap read position to base loop length
-        int readPos = readPosition.load();
+        // Use shared read position from TrackManager, wrapped to base loop length
+        int readPos = sharedReadPosition + sample;
         if (baseLoopLength > 0 && readPos >= baseLoopLength)
         {
-            readPos = 0;
-            readPosition.store(0);
+            readPos = readPos % baseLoopLength;
         }
 
         for (int channel = 0; channel < numChannels; ++channel)
@@ -193,8 +192,6 @@ void Looper::processPlayback(juce::AudioBuffer<float>& outputBuffer, float volum
 
             outputBuffer.addSample(channel, sample, mixedSample * volume);
         }
-
-        readPosition++;
     }
 }
 

@@ -29,7 +29,7 @@ public:
     void prepare(double sampleRate);
 
     // Recording control
-    void startRecording();
+    void startRecording(int currentReadPosition);
     void stopRecording();
     bool isRecording() const { return recordingLoopIndex != -1; }
 
@@ -45,7 +45,7 @@ public:
 
     // Audio processing
     void processRecording(const juce::AudioBuffer<float>& inputBuffer);
-    void processPlayback(juce::AudioBuffer<float>& outputBuffer, float volume);
+    void processPlayback(juce::AudioBuffer<float>& outputBuffer, float volume, int sharedReadPosition);
 
     // Thread-safe actions (to be called from non-audio thread)
     void requestClearAll();

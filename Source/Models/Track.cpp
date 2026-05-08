@@ -21,7 +21,7 @@ void Track::startRecording()
     if (!recording.load())
     {
         recording.store(true);
-        looper.startRecording();
+        looper.startRecording(trackManager.getReadPosition());
     }
 }
 
