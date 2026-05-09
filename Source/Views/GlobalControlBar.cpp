@@ -38,6 +38,18 @@ void GlobalControlBar::setupComponents() {
   };
   addAndMakeVisible(playButton);
 
+  // Stop All button
+  stopAllButton.setButtonText("Stop All");
+  stopAllButton.setColour(juce::TextButton::buttonColourId,
+                          juce::Colours::darkgrey);
+  stopAllButton.setColour(juce::TextButton::buttonOnColourId,
+                          juce::Colours::red);
+  stopAllButton.onClick = [this]() {
+    if (onStopAll)
+      onStopAll();
+  };
+  addAndMakeVisible(stopAllButton);
+
   // Monitor button (attached to parameter)
   monitorButton.setButtonText("Monitor");
   monitorButton.setColour(juce::TextButton::buttonColourId,
@@ -115,6 +127,10 @@ void GlobalControlBar::resized() {
 
   // Play button
   playButton.setBounds(bottomRow.removeFromLeft(buttonWidth));
+  bottomRow.removeFromLeft(5);
+
+  // Stop All button
+  stopAllButton.setBounds(bottomRow.removeFromLeft(buttonWidth));
   bottomRow.removeFromLeft(10);
 
   // Monitor button

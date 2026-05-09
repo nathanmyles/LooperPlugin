@@ -34,6 +34,14 @@ void LooperAudioProcessorEditor::setupCallbacks() {
     }
   };
 
+  controlBar.onStopAll = [this]() {
+    audioProcessor.stopPlayback();
+    // Turn off the play button state
+    auto *playParam = audioProcessor.parameters.getParameter("play");
+    if (playParam)
+      playParam->setValueNotifyingHost(0.0f);
+  };
+
   controlBar.onMonitorChanged = [this](bool isMonitoring) {
     // Monitor state is handled automatically by the processor
     juce::ignoreUnused(isMonitoring);

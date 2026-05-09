@@ -8,7 +8,8 @@
  * GlobalControlBar - Top-level controls for the multi-track looper
  *
  * Contains:
- * - Play button (global play/stop)
+ * - Play All button (global play)
+ * - Stop All button (global stop)
  * - Monitor button (input monitoring)
  * - Clear All button
  * - Undo Last button (on last modified track or global undo)
@@ -20,6 +21,7 @@ public:
   // Callbacks
   std::function<void(bool)> onPlayChanged;
   std::function<void(bool)> onMonitorChanged;
+  std::function<void()> onStopAll;
   std::function<void()> onClearAll;
   std::function<void()> onUndoLast;
 
@@ -44,6 +46,8 @@ private:
   juce::TextButton playButton;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
       playAttachment;
+
+  juce::TextButton stopAllButton;
 
   juce::TextButton monitorButton;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
