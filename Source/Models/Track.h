@@ -35,10 +35,6 @@ public:
   void setVolume(float vol) { volume.store(juce::jlimit(0.0f, 1.0f, vol)); }
   float getVolume() const { return volume.load(); }
 
-  // Mute control
-  void setMuted(bool mute) { muted.store(mute); }
-  bool isMuted() const { return muted.load(); }
-
   // Solo control
   void setSoloed(bool solo) { soloed.store(solo); }
   bool isSoloed() const { return soloed.load(); }
@@ -71,7 +67,6 @@ private:
   Looper looper;
 
   std::atomic<float> volume{0.7f};
-  std::atomic<bool> muted{false};
   std::atomic<bool> soloed{false};
   std::atomic<bool> recording{false};
   std::atomic<bool> playing{false};

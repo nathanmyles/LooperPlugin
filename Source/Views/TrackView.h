@@ -50,7 +50,6 @@ private:
   juce::Label trackNameLabel;
   juce::Slider volumeSlider;
   juce::TextButton recordButton;
-  juce::TextButton muteButton;
   juce::TextButton soloButton;
   juce::TextButton clearButton;
   juce::TextButton undoButton;

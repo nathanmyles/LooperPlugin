@@ -45,19 +45,13 @@ void Track::clearAll() { looper.clearAll(); }
 void Track::undoLast() { looper.removeLastLoop(); }
 
 bool Track::shouldOutput(bool anyTrackSoloed) const {
-  // If any track is soloed, only soloed tracks play
-  if (anyTrackSoloed) {
-    return soloed.load() && !muted.load();
-  }
-
-  // Otherwise, muted tracks don't play
-  return !muted.load();
+  if (anyTrackSoloed)
+    return soloed.load();
+  return true;
 }
 
 float Track::getEffectiveVolume(bool anyTrackSoloed) const {
-  if (!shouldOutput(anyTrackSoloed)) {
+  if (!shouldOutput(anyTrackSoloed))
     return 0.0f;
-  }
-
   return volume.load();
 }

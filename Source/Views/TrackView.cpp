@@ -25,7 +25,7 @@ void TrackView::setupComponents() {
   addAndMakeVisible(volumeSlider);
 
   // Record button
-  recordButton.setButtonText("REC");
+  recordButton.setButtonText("Record");
   recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
   recordButton.setColour(juce::TextButton::buttonOnColourId,
                          juce::Colours::red);
@@ -51,20 +51,8 @@ void TrackView::setupComponents() {
   };
   addAndMakeVisible(playButton);
 
-  // Mute button
-  muteButton.setButtonText("M");
-  muteButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
-  muteButton.setColour(juce::TextButton::buttonOnColourId,
-                       juce::Colours::orange);
-  muteButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
-  muteButton.setClickingTogglesState(true);
-  muteButton.onClick = [this]() {
-    track.setMuted(muteButton.getToggleState());
-  };
-  addAndMakeVisible(muteButton);
-
   // Solo button
-  soloButton.setButtonText("S");
+  soloButton.setButtonText("Solo");
   soloButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
   soloButton.setColour(juce::TextButton::buttonOnColourId,
                        juce::Colours::yellow);
@@ -130,7 +118,6 @@ void TrackView::resized() {
 
   // Layout from top to bottom
   const int buttonHeight = 25;
-  const int smallButtonWidth = 30;
   const int labelHeight = 20;
 
   // Track name at top
@@ -153,11 +140,8 @@ void TrackView::resized() {
   playButton.setBounds(bounds.removeFromTop(buttonHeight));
   bounds.removeFromTop(5);
 
-  // Mute and Solo buttons side by side
-  auto muteSoloRow = bounds.removeFromTop(buttonHeight);
-  muteButton.setBounds(
-      muteSoloRow.removeFromLeft(muteSoloRow.getWidth() / 2 - 2));
-  soloButton.setBounds(muteSoloRow.removeFromRight(muteSoloRow.getWidth()));
+  // Solo button
+  soloButton.setBounds(bounds.removeFromTop(buttonHeight));
   bounds.removeFromTop(5);
 
   // Clear and Undo buttons
@@ -173,7 +157,6 @@ void TrackView::resized() {
 void TrackView::updateFromTrack() {
   // Sync UI with track state
   volumeSlider.setValue(track.getVolume(), juce::dontSendNotification);
-  muteButton.setToggleState(track.isMuted(), juce::dontSendNotification);
   soloButton.setToggleState(track.isSoloed(), juce::dontSendNotification);
   recordButton.setToggleState(track.isRecording(), juce::dontSendNotification);
   playButton.setToggleState(track.isPlaying(), juce::dontSendNotification);

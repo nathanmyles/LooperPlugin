@@ -296,7 +296,6 @@ void TrackManager::getState(juce::ValueTree &state, double sampleRate) const {
     juce::ValueTree trackState("Track" + juce::String(i));
     trackState.setProperty("trackId", tracks[i]->getId(), nullptr);
     trackState.setProperty("volume", tracks[i]->getVolume(), nullptr);
-    trackState.setProperty("muted", tracks[i]->isMuted(), nullptr);
     trackState.setProperty("soloed", tracks[i]->isSoloed(), nullptr);
 
     tracks[i]->getLooper().getState(trackState, sampleRate);
@@ -328,7 +327,6 @@ void TrackManager::setState(const juce::ValueTree &state, double sampleRate) {
 
       // Restore track properties
       track->setVolume(trackState.getProperty("volume", 0.7f));
-      track->setMuted(trackState.getProperty("muted", false));
       track->setSoloed(trackState.getProperty("soloed", false));
 
       // Restore looper state
