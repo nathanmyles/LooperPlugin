@@ -1,6 +1,8 @@
 # LooperPlugin
 
-A multi-track audio looper plugin built with the JUCE framework. Record multiple synchronized loops across unlimited tracks, with each track supporting multiple overdubbed layers.
+A multi-track audio looper plugin. Record multiple synchronized loops across unlimited tracks, with each track supporting multiple overdubbed layers.
+
+This project is built using the JUCE Framework and is open-sourced under the AGPLv3 license. For hobby, educational, and non-commercial development, feel free to use and modify the source code. If you wish to use this code in a proprietary or commercial audio product, please contact the repository owner to discuss commercial licensing terms.
 
 ## Features
 
