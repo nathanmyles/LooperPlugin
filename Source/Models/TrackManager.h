@@ -1,11 +1,11 @@
 #pragma once
 
 #include <atomic>
-#include <vector>
-#include <memory>
-#include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <memory>
+#include <vector>
 
 class Track;
 
@@ -18,85 +18,86 @@ class Track;
  * - Recording/playback controls across all tracks
  * - Audio processing for all tracks
  */
-class TrackManager
-{
+class TrackManager {
 public:
-    TrackManager();
-    ~TrackManager();
+  TrackManager();
+  ~TrackManager();
 
-    // Initialize with sample rate
-    void prepare(double sampleRate);
+  // Initialize with sample rate
+  void prepare(double sampleRate);
 
-    // Base loop length management (set by first track to record)
-    void setBaseLoopLength(int length);
-    int getBaseLoopLength() const;
-    bool hasBaseLoopLength() const { return baseLoopLength.load() > 0; }
-    void resetBaseLoopLength() { baseLoopLength.store(0); }
+  // Base loop length management (set by first track to record)
+  void setBaseLoopLength(int length);
+  int getBaseLoopLength() const;
+  bool hasBaseLoopLength() const { return baseLoopLength.load() > 0; }
+  void resetBaseLoopLength() { baseLoopLength.store(0); }
 
-    // Shared read position for synchronized playback
-    int getReadPosition() const { return readPosition.load(); }
-    void setReadPosition(int position) { readPosition.store(position); }
-    void incrementReadPosition(int samples);
-    void resetReadPosition() { readPosition.store(0); }
+  // Shared read position for synchronized playback
+  int getReadPosition() const { return readPosition.load(); }
+  void setReadPosition(int position) { readPosition.store(position); }
+  void incrementReadPosition(int samples);
+  void resetReadPosition() { readPosition.store(0); }
 
-    // Calculate wrapped position within base loop length
-    int getWrappedReadPosition() const;
+  // Calculate wrapped position within base loop length
+  int getWrappedReadPosition() const;
 
-    // Check if a position would exceed the base loop length
-    bool wouldExceedLoopLength(int position) const;
+  // Check if a position would exceed the base loop length
+  bool wouldExceedLoopLength(int position) const;
 
-    // Get max loop duration in samples (e.g., 60 seconds)
-    int getMaxLoopLength() const { return maxLoopLength; }
+  // Get max loop duration in samples (e.g., 60 seconds)
+  int getMaxLoopLength() const { return maxLoopLength; }
 
-    // Track management
-    Track* addTrack();
-    void removeTrack(int trackId);
-    void removeAllTracks();
-    std::vector<std::unique_ptr<Track>>& getTracks() { return tracks; }
-    const std::vector<std::unique_ptr<Track>>& getTracks() const { return tracks; }
-    Track* findTrack(int trackId);
-    int getTrackCount() const { return static_cast<int>(tracks.size()); }
+  // Track management
+  Track *addTrack();
+  void removeTrack(int trackId);
+  void removeAllTracks();
+  std::vector<std::unique_ptr<Track>> &getTracks() { return tracks; }
+  const std::vector<std::unique_ptr<Track>> &getTracks() const {
+    return tracks;
+  }
+  Track *findTrack(int trackId);
+  int getTrackCount() const { return static_cast<int>(tracks.size()); }
 
-    // Track controls
-    bool startRecordingTrack(int trackId);
-    void stopRecordingTrack(int trackId);
-    void stopAllRecording();
-    void startPlaybackTrack(int trackId);
-    void stopPlaybackTrack(int trackId);
-    void clearTrack(int trackId);
-    void undoTrack(int trackId);
+  // Track controls
+  bool startRecordingTrack(int trackId);
+  void stopRecordingTrack(int trackId);
+  void stopAllRecording();
+  void startPlaybackTrack(int trackId);
+  void stopPlaybackTrack(int trackId);
+  void clearTrack(int trackId);
+  void undoTrack(int trackId);
 
-    // Global controls
-    void requestClearAll();
-    void requestUndoLast();
-    void startPlayback();
-    void stopPlayback();
-    bool isPlaying() const;
+  // Global controls
+  void requestClearAll();
+  void requestUndoLast();
+  void startPlayback();
+  void stopPlayback();
+  bool isPlaying() const;
 
-    // Solo logic
-    bool isAnyTrackSoloed() const;
+  // Solo logic
+  bool isAnyTrackSoloed() const;
 
-    // Recording
-    void toggleLastTrackRecording();
+  // Recording
+  void toggleLastTrackRecording();
 
-    // Audio processing
-    void processBlock(juce::AudioBuffer<float>& buffer, bool shouldMonitor);
+  // Audio processing
+  void processBlock(juce::AudioBuffer<float> &buffer, bool shouldMonitor);
 
-    // State serialization
-    void getState(juce::ValueTree& state, double sampleRate) const;
-    void setState(const juce::ValueTree& state, double sampleRate);
+  // State serialization
+  void getState(juce::ValueTree &state, double sampleRate) const;
+  void setState(const juce::ValueTree &state, double sampleRate);
 
 private:
-    std::atomic<int> baseLoopLength{0};
-    std::atomic<int> readPosition{0};
+  std::atomic<int> baseLoopLength{0};
+  std::atomic<int> readPosition{0};
 
-    double currentSampleRate = 44100.0;
-    int maxLoopLength = 44100 * 60;
+  double currentSampleRate = 44100.0;
+  int maxLoopLength = 44100 * 60;
 
-    std::vector<std::unique_ptr<Track>> tracks;
-    int nextTrackId = 0;
+  std::vector<std::unique_ptr<Track>> tracks;
+  int nextTrackId = 0;
 
-    Track* findTrackWithMostRecentLoop() const;
+  Track *findTrackWithMostRecentLoop() const;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackManager)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackManager)
 };

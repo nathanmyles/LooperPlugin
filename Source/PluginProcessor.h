@@ -1,90 +1,97 @@
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
-#include "Models/TrackManager.h"
 #include "Models/Track.h"
+#include "Models/TrackManager.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 
-class LooperAudioProcessor  : public juce::AudioProcessor
-{
+class LooperAudioProcessor : public juce::AudioProcessor {
 public:
-    LooperAudioProcessor();
-    ~LooperAudioProcessor() override;
+  LooperAudioProcessor();
+  ~LooperAudioProcessor() override;
 
-    void prepareToPlay (double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
+  void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+  void releaseResources() override;
 
-   #ifndef JucePlugin_PreferredChannelConfigurations
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
+#ifndef JucePlugin_PreferredChannelConfigurations
+  bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+#endif
 
-    void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-    using juce::AudioProcessor::processBlock;
+  void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
+  using juce::AudioProcessor::processBlock;
 
-    juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
+  juce::AudioProcessorEditor *createEditor() override;
+  bool hasEditor() const override;
 
-    const juce::String getName() const override;
+  const juce::String getName() const override;
 
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
+  bool acceptsMidi() const override;
+  bool producesMidi() const override;
+  bool isMidiEffect() const override;
+  double getTailLengthSeconds() const override;
 
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
-    void setCurrentProgram (int index) override;
-    const juce::String getProgramName (int index) override;
-    void changeProgramName (int index, const juce::String& newName) override;
+  int getNumPrograms() override;
+  int getCurrentProgram() override;
+  void setCurrentProgram(int index) override;
+  const juce::String getProgramName(int index) override;
+  void changeProgramName(int index, const juce::String &newName) override;
 
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+  void getStateInformation(juce::MemoryBlock &destData) override;
+  void setStateInformation(const void *data, int sizeInBytes) override;
 
-    juce::AudioProcessorValueTreeState parameters;
+  juce::AudioProcessorValueTreeState parameters;
 
-    // Track management for editor (delegated to TrackManager)
-    Track* addTrack() { return trackManager.addTrack(); }
-    void removeTrack(int trackId) { trackManager.removeTrack(trackId); }
-    void removeAllTracks() { trackManager.removeAllTracks(); }
-    std::vector<std::unique_ptr<Track>>& getTracks() { return trackManager.getTracks(); }
-    Track* findTrack(int trackId) { return trackManager.findTrack(trackId); }
-    int getTrackCount() const { return trackManager.getTrackCount(); }
+  // Track management for editor (delegated to TrackManager)
+  Track *addTrack() { return trackManager.addTrack(); }
+  void removeTrack(int trackId) { trackManager.removeTrack(trackId); }
+  void removeAllTracks() { trackManager.removeAllTracks(); }
+  std::vector<std::unique_ptr<Track>> &getTracks() {
+    return trackManager.getTracks();
+  }
+  Track *findTrack(int trackId) { return trackManager.findTrack(trackId); }
+  int getTrackCount() const { return trackManager.getTrackCount(); }
 
-    // Track controls (delegated to TrackManager)
-    void startRecordingTrack(int trackId);
-    void stopRecordingTrack(int trackId) { trackManager.stopRecordingTrack(trackId); }
-    void stopAllRecording() { trackManager.stopAllRecording(); }
-    void startPlaybackTrack(int trackId) { trackManager.startPlaybackTrack(trackId); }
-    void stopPlaybackTrack(int trackId) { trackManager.stopPlaybackTrack(trackId); }
-    void clearTrack(int trackId) { trackManager.clearTrack(trackId); }
-    void undoTrack(int trackId) { trackManager.undoTrack(trackId); }
+  // Track controls (delegated to TrackManager)
+  void startRecordingTrack(int trackId);
+  void stopRecordingTrack(int trackId) {
+    trackManager.stopRecordingTrack(trackId);
+  }
+  void stopAllRecording() { trackManager.stopAllRecording(); }
+  void startPlaybackTrack(int trackId) {
+    trackManager.startPlaybackTrack(trackId);
+  }
+  void stopPlaybackTrack(int trackId) {
+    trackManager.stopPlaybackTrack(trackId);
+  }
+  void clearTrack(int trackId) { trackManager.clearTrack(trackId); }
+  void undoTrack(int trackId) { trackManager.undoTrack(trackId); }
 
-    // Global controls (delegated to TrackManager)
-    void requestClearAll() { trackManager.requestClearAll(); }
-    void requestUndoLast() { trackManager.requestUndoLast(); }
-    void startPlayback() { trackManager.startPlayback(); }
-    void stopPlayback() { trackManager.stopPlayback(); }
-    bool isPlaying() const { return trackManager.isPlaying(); }
+  // Global controls (delegated to TrackManager)
+  void requestClearAll() { trackManager.requestClearAll(); }
+  void requestUndoLast() { trackManager.requestUndoLast(); }
+  void startPlayback() { trackManager.startPlayback(); }
+  void stopPlayback() { trackManager.stopPlayback(); }
+  bool isPlaying() const { return trackManager.isPlaying(); }
 
-    // Solo logic (delegated to TrackManager)
-    bool isAnyTrackSoloed() const { return trackManager.isAnyTrackSoloed(); }
+  // Solo logic (delegated to TrackManager)
+  bool isAnyTrackSoloed() const { return trackManager.isAnyTrackSoloed(); }
 
-    // Recording (delegated to TrackManager)
-    void toggleLastTrackRecording() { trackManager.toggleLastTrackRecording(); }
+  // Recording (delegated to TrackManager)
+  void toggleLastTrackRecording() { trackManager.toggleLastTrackRecording(); }
 
-    // Access to track manager
-    TrackManager& getTrackManager() { return trackManager; }
+  // Access to track manager
+  TrackManager &getTrackManager() { return trackManager; }
 
 private:
-    std::atomic<float>* playParam = nullptr;
-    std::atomic<float>* monitorParam = nullptr;
+  std::atomic<float> *playParam = nullptr;
+  std::atomic<float> *monitorParam = nullptr;
 
-    // Core components
-    TrackManager trackManager;
+  // Core components
+  TrackManager trackManager;
 
-    // State
-    double currentSampleRate = 44100.0;
+  // State
+  double currentSampleRate = 44100.0;
 
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+  juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LooperAudioProcessor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LooperAudioProcessor)
 };

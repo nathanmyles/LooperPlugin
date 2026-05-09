@@ -1,86 +1,63 @@
 #include "Track.h"
 #include "TrackManager.h"
 
-Track::Track(int id, TrackManager& tm)
-    : trackId(id), trackManager(tm)
-{
+Track::Track(int id, TrackManager &tm) : trackId(id), trackManager(tm) {}
+
+Track::~Track() {}
+
+void Track::prepare(double sampleRate) {
+  currentSampleRate = sampleRate;
+  looper.prepare(sampleRate);
 }
 
-Track::~Track()
-{
+void Track::startRecording() {
+  if (!recording.load()) {
+    recording.store(true);
+    looper.startRecording(trackManager.getReadPosition());
+  }
 }
 
-void Track::prepare(double sampleRate)
-{
-    currentSampleRate = sampleRate;
-    looper.prepare(sampleRate);
-}
+void Track::stopRecording() {
+  if (recording.load()) {
+    recording.store(false);
+    looper.stopRecording();
 
-void Track::startRecording()
-{
-    if (!recording.load())
-    {
-        recording.store(true);
-        looper.startRecording(trackManager.getReadPosition());
+    // If this is the first loop, set the base loop length for all tracks
+    int baseLength = looper.getBaseLoopLength();
+    if (baseLength > 0 && trackManager.getBaseLoopLength() == 0) {
+      trackManager.setBaseLoopLength(baseLength);
     }
+  }
 }
 
-void Track::stopRecording()
-{
-    if (recording.load())
-    {
-        recording.store(false);
-        looper.stopRecording();
-
-        // If this is the first loop, set the base loop length for all tracks
-        int baseLength = looper.getBaseLoopLength();
-        if (baseLength > 0 && trackManager.getBaseLoopLength() == 0)
-        {
-            trackManager.setBaseLoopLength(baseLength);
-        }
-    }
+void Track::startPlayback() {
+  playing.store(true);
+  looper.startPlayback();
 }
 
-void Track::startPlayback()
-{
-    playing.store(true);
-    looper.startPlayback();
+void Track::stopPlayback() {
+  playing.store(false);
+  looper.stopPlayback();
 }
 
-void Track::stopPlayback()
-{
-    playing.store(false);
-    looper.stopPlayback();
+void Track::clearAll() { looper.clearAll(); }
+
+void Track::undoLast() { looper.removeLastLoop(); }
+
+bool Track::shouldOutput(bool anyTrackSoloed) const {
+  // If any track is soloed, only soloed tracks play
+  if (anyTrackSoloed) {
+    return soloed.load() && !muted.load();
+  }
+
+  // Otherwise, muted tracks don't play
+  return !muted.load();
 }
 
-void Track::clearAll()
-{
-    looper.clearAll();
-}
+float Track::getEffectiveVolume(bool anyTrackSoloed) const {
+  if (!shouldOutput(anyTrackSoloed)) {
+    return 0.0f;
+  }
 
-void Track::undoLast()
-{
-    looper.removeLastLoop();
-}
-
-bool Track::shouldOutput(bool anyTrackSoloed) const
-{
-    // If any track is soloed, only soloed tracks play
-    if (anyTrackSoloed)
-    {
-        return soloed.load() && !muted.load();
-    }
-
-    // Otherwise, muted tracks don't play
-    return !muted.load();
-}
-
-float Track::getEffectiveVolume(bool anyTrackSoloed) const
-{
-    if (!shouldOutput(anyTrackSoloed))
-    {
-        return 0.0f;
-    }
-
-    return volume.load();
+  return volume.load();
 }
