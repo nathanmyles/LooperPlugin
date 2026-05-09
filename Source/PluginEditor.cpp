@@ -137,13 +137,7 @@ void LooperAudioProcessorEditor::updateTrackButtons() {
       anyPlaying = true;
   }
 
-  auto *playParam = audioProcessor.parameters.getParameter("play");
-  if (playParam) {
-    float current = playParam->getValue();
-    float target = anyPlaying ? 1.0f : 0.0f;
-    if (std::abs(current - target) > 0.01f)
-      playParam->setValueNotifyingHost(target);
-  }
+  controlBar.setPlayAllButtonState(anyPlaying);
 
   // Update control bar info
   int totalLoops = 0;

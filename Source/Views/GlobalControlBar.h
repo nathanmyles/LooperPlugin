@@ -39,13 +39,14 @@ public:
   void setStatusText(const juce::String &text);
   void setLoopInfo(int trackCount, int totalLoops);
 
+  // Set play all button state without triggering callbacks
+  void setPlayAllButtonState(bool isPlaying);
+
 private:
   juce::AudioProcessorValueTreeState &parameters;
 
   // Controls
   juce::TextButton playButton;
-  std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
-      playAttachment;
 
   juce::TextButton stopAllButton;
 

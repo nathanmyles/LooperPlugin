@@ -21,20 +21,19 @@ void GlobalControlBar::setupComponents() {
   titleLabel.setJustificationType(juce::Justification::left);
   addAndMakeVisible(titleLabel);
 
-  // Play button (attached to parameter)
+  // Play button (manually synced with parameter to avoid feedback loops)
   playButton.setColour(juce::TextButton::buttonColourId,
                        juce::Colours::darkgrey);
   playButton.setColour(juce::TextButton::buttonOnColourId,
                        juce::Colours::green);
   playButton.setColour(juce::TextButton::textColourOnId, juce::Colours::white);
   playButton.setClickingTogglesState(true);
-  playAttachment =
-      std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-          parameters, "play", playButton);
   playButton.setButtonText("Play All");
   playButton.onClick = [this]() {
+    bool isOn = playButton.getToggleState();
+    parameters.getParameter("play")->setValueNotifyingHost(isOn ? 1.0f : 0.0f);
     if (onPlayChanged)
-      onPlayChanged(playButton.getToggleState());
+      onPlayChanged(isOn);
   };
   addAndMakeVisible(playButton);
 
@@ -146,12 +145,15 @@ void GlobalControlBar::resized() {
   infoLabel.setBounds(bottomRow.removeFromRight(150));
 }
 
+void GlobalControlBar::setPlayAllButtonState(bool isPlaying) {
+  playButton.setToggleState(isPlaying, juce::dontSendNotification);
+  updateButtonStyles();
+}
+
 void GlobalControlBar::parameterChanged(const juce::String &parameterID,
                                         float newValue) {
-  juce::ignoreUnused(newValue);
-
   if (parameterID == "play") {
-    updateButtonStyles();
+    setPlayAllButtonState(newValue >= 0.5f);
   } else if (parameterID == "monitor") {
     updateButtonStyles();
   }
