@@ -42,12 +42,15 @@ public:
   std::function<void(int, bool)> onPlayClicked;
   std::function<void(int)> onClearTrack;
   std::function<void(int)> onUndoTrack;
+  std::function<void(int)> onTrackClicked;
+  std::function<bool()> isSelectedCallback;
 
   TrackView(int trackId, Track &track);
   ~TrackView() override;
 
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void mouseDown(const juce::MouseEvent &event) override;
 
   // Update UI to reflect track state
   void updateFromTrack();

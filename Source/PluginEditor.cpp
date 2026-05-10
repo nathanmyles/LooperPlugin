@@ -38,6 +38,9 @@ LooperAudioProcessorEditor::LooperAudioProcessorEditor(LooperAudioProcessor &p)
 
   // Start timer for UI updates (30fps)
   startTimer(33);
+
+  // Enable keyboard focus
+  setWantsKeyboardFocus(true);
 }
 
 LooperAudioProcessorEditor::~LooperAudioProcessorEditor() { stopTimer(); }
@@ -166,12 +169,48 @@ void LooperAudioProcessorEditor::updateTrackButtons() {
 }
 
 bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key) {
+  int selectedId = trackContainer.getSelectedTrackId();
+  if (selectedId < 0)
+    return false;
+
+  Track *track = audioProcessor.findTrack(selectedId);
+  if (track == nullptr)
+    return false;
+
   if (key == juce::KeyPress('r') || key == juce::KeyPress('R')) {
-    audioProcessor.toggleLastTrackRecording();
+    if (track->isRecording()) {
+      audioProcessor.stopRecordingTrack(selectedId);
+    } else {
+      audioProcessor.startRecordingTrack(selectedId);
+    }
     trackContainer.refreshTrackViews();
     updateTrackButtons();
     return true;
   }
+
+  if (key == juce::KeyPress(' ')) {
+    if (track->isPlaying()) {
+      audioProcessor.stopPlaybackTrack(selectedId);
+    } else {
+      audioProcessor.startPlaybackTrack(selectedId);
+    }
+    trackContainer.refreshTrackViews();
+    updateTrackButtons();
+    return true;
+  }
+
+  if (key == juce::KeyPress::backspaceKey) {
+    audioProcessor.clearTrack(selectedId);
+    trackContainer.refreshTrackViews();
+    return true;
+  }
+
+  if (key == juce::KeyPress('z') && key.getModifiers().isCtrlDown()) {
+    audioProcessor.undoTrack(selectedId);
+    trackContainer.refreshTrackViews();
+    return true;
+  }
+
   return false;
 }
 

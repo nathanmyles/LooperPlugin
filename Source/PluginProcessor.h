@@ -93,9 +93,6 @@ public:
   // Solo logic (delegated to TrackManager)
   bool isAnyTrackSoloed() const { return trackManager.isAnyTrackSoloed(); }
 
-  // Recording (delegated to TrackManager)
-  void toggleLastTrackRecording() { trackManager.toggleLastTrackRecording(); }
-
   // Access to track manager
   TrackManager &getTrackManager() { return trackManager; }
 

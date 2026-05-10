@@ -120,6 +120,12 @@ void TrackView::paint(juce::Graphics &g) {
   // Draw background
   g.fillAll(juce::Colours::darkgrey.darker());
 
+  // Highlight if selected
+  if (isSelectedCallback && isSelectedCallback()) {
+    g.setColour(juce::Colours::orange.withAlpha(0.3f));
+    g.fillRect(getLocalBounds());
+  }
+
   // Draw border
   g.setColour(juce::Colours::grey);
   g.drawRect(getLocalBounds(), 1);
@@ -129,6 +135,11 @@ void TrackView::paint(juce::Graphics &g) {
     g.setColour(juce::Colours::red.withAlpha(0.3f));
     g.fillRect(getLocalBounds());
   }
+}
+
+void TrackView::mouseDown(const juce::MouseEvent &event) {
+  if (onTrackClicked)
+    onTrackClicked(trackId);
 }
 
 void TrackView::resized() {

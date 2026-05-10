@@ -95,9 +95,6 @@ public:
   // Solo logic
   bool isAnyTrackSoloed() const;
 
-  // Recording
-  void toggleLastTrackRecording();
-
   // Audio processing
   void processBlock(juce::AudioBuffer<float> &buffer, bool shouldMonitor);
 

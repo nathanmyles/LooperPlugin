@@ -240,18 +240,6 @@ bool TrackManager::isAnyTrackSoloed() const {
   return false;
 }
 
-void TrackManager::toggleLastTrackRecording() {
-  if (tracks.empty())
-    return;
-
-  auto &lastTrack = tracks.back();
-  if (lastTrack->isRecording()) {
-    stopAllRecording();
-  } else {
-    startRecordingTrack(lastTrack->getId());
-  }
-}
-
 void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
                                 bool shouldMonitor) {
   // Handle pending requests for all tracks

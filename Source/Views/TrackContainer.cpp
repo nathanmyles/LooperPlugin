@@ -98,6 +98,15 @@ void TrackContainer::addTrackView(Track *track) {
     }
   };
 
+  trackView->onTrackClicked = [this](int trackId) {
+    selectTrack(trackId);
+  };
+
+  int id = track->getId();
+  trackView->isSelectedCallback = [this, id]() {
+    return id == selectedTrackId;
+  };
+
   trackList.addTrackView(std::move(trackView));
 
   // Update layout
@@ -105,10 +114,11 @@ void TrackContainer::addTrackView(Track *track) {
 }
 
 void TrackContainer::removeTrackView(int trackId) {
-  // Remove from track list (UI only)
+  if (selectedTrackId == trackId)
+    selectedTrackId = -1;
+
   trackList.removeTrackView(trackId);
 
-  // Update layout
   resized();
 }
 
@@ -120,6 +130,22 @@ void TrackContainer::removeAllTrackViews() {
 void TrackContainer::refreshTrackViews() {
   for (auto &trackView : trackList.getTrackViews()) {
     trackView->updateFromTrack();
+  }
+}
+
+void TrackContainer::selectTrack(int trackId) {
+  if (selectedTrackId == trackId)
+    return;
+
+  int oldSelected = selectedTrackId;
+  selectedTrackId = trackId;
+
+  auto &views = trackList.getTrackViews();
+  for (auto &view : views) {
+    int id = view->getTrackId();
+    if (id == oldSelected || id == selectedTrackId) {
+      view->repaint();
+    }
   }
 }
 

@@ -56,6 +56,10 @@ public:
   // Refresh all track views (call during timer callback)
   void refreshTrackViews();
 
+  // Selection
+  void selectTrack(int trackId);
+  int getSelectedTrackId() const { return selectedTrackId; }
+
   void paint(juce::Graphics &g) override;
   void resized() override;
 
@@ -82,6 +86,8 @@ private:
   };
 
   TrackListComponent trackList;
+
+  int selectedTrackId = -1;
 
   // Add track button
   juce::TextButton addTrackButton;
