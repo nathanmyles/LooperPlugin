@@ -57,8 +57,7 @@ void LooperAudioProcessorEditor::setupCallbacks() {
 
   controlBar.onStopAll = [this]() {
     audioProcessor.stopPlayback();
-    // Turn off the play button state
-    auto *playParam = audioProcessor.parameters.getParameter("play");
+    auto *playParam = audioProcessor.parameters.getParameter("playAll");
     if (playParam)
       playParam->setValueNotifyingHost(0.0f);
   };
@@ -97,11 +96,18 @@ void LooperAudioProcessorEditor::setupCallbacks() {
     updateTrackButtons();
   };
 
+  trackContainer.onSelectedTrackChanged = [this](int trackId) {
+    audioProcessor.setCurrentTrackId(trackId);
+  };
+
   trackContainer.onRecordTrack = [this](int trackId, bool isRecording) {
     if (isRecording) {
       audioProcessor.startRecordingTrack(trackId);
     } else {
       audioProcessor.stopRecordingTrack(trackId);
+    }
+    if (trackId == audioProcessor.getCurrentTrackId()) {
+      audioProcessor.syncParamsWithCurrentTrack();
     }
     trackContainer.refreshTrackViews();
     updateTrackButtons();
@@ -112,6 +118,9 @@ void LooperAudioProcessorEditor::setupCallbacks() {
       audioProcessor.startPlaybackTrack(trackId);
     } else {
       audioProcessor.stopPlaybackTrack(trackId);
+    }
+    if (trackId == audioProcessor.getCurrentTrackId()) {
+      audioProcessor.syncParamsWithCurrentTrack();
     }
     trackContainer.refreshTrackViews();
     updateTrackButtons();
@@ -136,6 +145,12 @@ void LooperAudioProcessorEditor::addInitialTrack() {
   } else {
     // Tracks were restored from state - add them to UI
     syncTracksWithProcessor();
+  }
+
+  // Select the first track by default
+  if (audioProcessor.getTrackCount() > 0) {
+    int firstId = audioProcessor.getTracks()[0]->getId();
+    trackContainer.selectTrack(firstId);
   }
 
   updateTrackButtons();
@@ -183,6 +198,9 @@ bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key) {
     } else {
       audioProcessor.startRecordingTrack(selectedId);
     }
+    if (selectedId == audioProcessor.getCurrentTrackId()) {
+      audioProcessor.syncParamsWithCurrentTrack();
+    }
     trackContainer.refreshTrackViews();
     updateTrackButtons();
     return true;
@@ -194,6 +212,8 @@ bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key) {
     } else {
       audioProcessor.startPlaybackTrack(selectedId);
     }
+    if (selectedId == audioProcessor.getCurrentTrackId())
+      audioProcessor.syncParamsWithCurrentTrack();
     trackContainer.refreshTrackViews();
     updateTrackButtons();
     return true;
@@ -201,12 +221,14 @@ bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key) {
 
   if (key == juce::KeyPress::backspaceKey) {
     audioProcessor.clearTrack(selectedId);
+    audioProcessor.syncParamsWithCurrentTrack();
     trackContainer.refreshTrackViews();
     return true;
   }
 
   if (key == juce::KeyPress('z') && key.getModifiers().isCtrlDown()) {
     audioProcessor.undoTrack(selectedId);
+    audioProcessor.syncParamsWithCurrentTrack();
     trackContainer.refreshTrackViews();
     return true;
   }

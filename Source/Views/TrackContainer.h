@@ -42,6 +42,7 @@ public:
   std::function<void(int, bool)> onPlayTrack;
   std::function<void(int)> onClearTrack;
   std::function<void(int)> onUndoTrack;
+  std::function<void(int)> onSelectedTrackChanged;
   std::function<void()> onRefreshUI;
 
   TrackContainer();

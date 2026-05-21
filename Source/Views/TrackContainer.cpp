@@ -147,6 +147,10 @@ void TrackContainer::selectTrack(int trackId) {
       view->repaint();
     }
   }
+
+  if (onSelectedTrackChanged) {
+    onSelectedTrackChanged(trackId);
+  }
 }
 
 // TrackListComponent implementation

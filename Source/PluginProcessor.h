@@ -22,7 +22,8 @@
 #include "Models/TrackManager.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class LooperAudioProcessor : public juce::AudioProcessor {
+class LooperAudioProcessor : public juce::AudioProcessor,
+                             public juce::AudioProcessorValueTreeState::Listener {
 public:
   LooperAudioProcessor();
   ~LooperAudioProcessor() override;
@@ -96,9 +97,27 @@ public:
   // Access to track manager
   TrackManager &getTrackManager() { return trackManager; }
 
+  // Current track for host automation
+  void setCurrentTrackId(int trackId) {
+    currentTrackId = trackId;
+    syncParamsWithCurrentTrack();
+  }
+  int getCurrentTrackId() const { return currentTrackId; }
+  void syncParamsWithCurrentTrack();
+
+  // AudioProcessorValueTreeState::Listener
+  void parameterChanged(const juce::String &parameterID,
+                        float newValue) override;
+
 private:
-  std::atomic<float> *playParam = nullptr;
+  std::atomic<float> *playAllParam = nullptr;
   std::atomic<float> *monitorParam = nullptr;
+  std::atomic<float> *recordParam = nullptr;
+  std::atomic<float> *playParam = nullptr;
+  std::atomic<float> *soloParam = nullptr;
+  std::atomic<float> *clearParam = nullptr;
+  std::atomic<float> *undoParam = nullptr;
+  std::atomic<int> currentTrackId{-1};
 
   // Core components
   TrackManager trackManager;

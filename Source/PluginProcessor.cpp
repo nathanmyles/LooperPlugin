@@ -30,11 +30,30 @@ LooperAudioProcessor::LooperAudioProcessor()
 #endif
               ),
       parameters(*this, nullptr, "PARAMETERS", createParameterLayout()) {
-  playParam = parameters.getRawParameterValue("play");
+  playAllParam = parameters.getRawParameterValue("playAll");
   monitorParam = parameters.getRawParameterValue("monitor");
+  recordParam = parameters.getRawParameterValue("record");
+  playParam = parameters.getRawParameterValue("play");
+  soloParam = parameters.getRawParameterValue("solo");
+  clearParam = parameters.getRawParameterValue("clear");
+  undoParam = parameters.getRawParameterValue("undo");
+
+  parameters.addParameterListener("playAll", this);
+  parameters.addParameterListener("record", this);
+  parameters.addParameterListener("play", this);
+  parameters.addParameterListener("solo", this);
+  parameters.addParameterListener("clear", this);
+  parameters.addParameterListener("undo", this);
 }
 
-LooperAudioProcessor::~LooperAudioProcessor() {}
+LooperAudioProcessor::~LooperAudioProcessor() {
+  parameters.removeParameterListener("playAll", this);
+  parameters.removeParameterListener("record", this);
+  parameters.removeParameterListener("play", this);
+  parameters.removeParameterListener("solo", this);
+  parameters.removeParameterListener("clear", this);
+  parameters.removeParameterListener("undo", this);
+}
 
 const juce::String LooperAudioProcessor::getName() const {
   return JucePlugin_Name;
@@ -126,7 +145,7 @@ void LooperAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 void LooperAudioProcessor::startRecordingTrack(int trackId) {
   bool autoStarted = trackManager.startRecordingTrack(trackId);
   if (autoStarted) {
-    parameters.getParameter("play")->setValueNotifyingHost(1.0f);
+    parameters.getParameter("playAll")->setValueNotifyingHost(1.0f);
   }
 }
 
@@ -160,12 +179,89 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 LooperAudioProcessor::createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-  // Global controls only - per-track controls are managed internally
-  layout.add(std::make_unique<juce::AudioParameterBool>("play", "Play", false));
+  layout.add(
+      std::make_unique<juce::AudioParameterBool>("playAll", "Play All", false));
   layout.add(
       std::make_unique<juce::AudioParameterBool>("monitor", "Monitor", false));
+  layout.add(
+      std::make_unique<juce::AudioParameterBool>("record", "Record", false));
+  layout.add(std::make_unique<juce::AudioParameterBool>("play", "Play", false));
+  layout.add(
+      std::make_unique<juce::AudioParameterBool>("solo", "Solo", false));
+  layout.add(
+      std::make_unique<juce::AudioParameterBool>("clear", "Clear", false));
+  layout.add(
+      std::make_unique<juce::AudioParameterBool>("undo", "Undo", false));
 
   return layout;
+}
+
+void LooperAudioProcessor::parameterChanged(const juce::String &parameterID,
+                                            float newValue) {
+  if (parameterID == "playAll") {
+    if (newValue >= 0.5f)
+      startPlayback();
+    else
+      stopPlayback();
+    return;
+  }
+
+  if (parameterID == "monitor")
+    return;
+
+  auto *track = findTrack(currentTrackId);
+  if (track == nullptr)
+    return;
+
+  if (parameterID == "record") {
+    bool shouldBeRecording = newValue >= 0.5f;
+    if (track->isRecording() == shouldBeRecording)
+      return;
+    if (shouldBeRecording)
+      trackManager.startRecordingTrack(currentTrackId);
+    else
+      trackManager.stopRecordingTrack(currentTrackId);
+  } else if (parameterID == "play") {
+    bool shouldBePlaying = newValue >= 0.5f;
+    if (track->isPlaying() == shouldBePlaying)
+      return;
+    if (shouldBePlaying)
+      trackManager.startPlaybackTrack(currentTrackId);
+    else
+      trackManager.stopPlaybackTrack(currentTrackId);
+  } else if (parameterID == "solo") {
+    bool shouldBeSoloed = newValue >= 0.5f;
+    if (track->isSoloed() == shouldBeSoloed)
+      return;
+    track->setSoloed(shouldBeSoloed);
+  } else if (parameterID == "clear" && newValue >= 0.5f) {
+    clearTrack(currentTrackId);
+    if (auto *param = parameters.getParameter("clear"))
+      param->setValueNotifyingHost(0.0f);
+  } else if (parameterID == "undo" && newValue >= 0.5f) {
+    undoTrack(currentTrackId);
+    if (auto *param = parameters.getParameter("undo"))
+      param->setValueNotifyingHost(0.0f);
+  }
+}
+
+void LooperAudioProcessor::syncParamsWithCurrentTrack() {
+  auto *track = findTrack(currentTrackId);
+  if (track == nullptr) {
+    if (auto *p = parameters.getParameter("record"))
+      p->setValueNotifyingHost(0.0f);
+    if (auto *p = parameters.getParameter("play"))
+      p->setValueNotifyingHost(0.0f);
+    if (auto *p = parameters.getParameter("solo"))
+      p->setValueNotifyingHost(0.0f);
+    return;
+  }
+  if (auto *p = parameters.getParameter("record"))
+    p->setValueNotifyingHost(track->isRecording() ? 1.0f : 0.0f);
+  if (auto *p = parameters.getParameter("play"))
+    p->setValueNotifyingHost(track->isPlaying() ? 1.0f : 0.0f);
+  if (auto *p = parameters.getParameter("solo"))
+    p->setValueNotifyingHost(track->isSoloed() ? 1.0f : 0.0f);
 }
 
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {

@@ -23,12 +23,12 @@ GlobalControlBar::GlobalControlBar(juce::AudioProcessorValueTreeState &params)
   setupComponents();
 
   // Add parameter listener
-  parameters.addParameterListener("play", this);
+  parameters.addParameterListener("playAll", this);
   parameters.addParameterListener("monitor", this);
 }
 
 GlobalControlBar::~GlobalControlBar() {
-  parameters.removeParameterListener("play", this);
+  parameters.removeParameterListener("playAll", this);
   parameters.removeParameterListener("monitor", this);
 }
 
@@ -49,7 +49,7 @@ void GlobalControlBar::setupComponents() {
   playButton.setButtonText("Play All");
   playButton.onClick = [this]() {
     bool isOn = playButton.getToggleState();
-    parameters.getParameter("play")->setValueNotifyingHost(isOn ? 1.0f : 0.0f);
+    parameters.getParameter("playAll")->setValueNotifyingHost(isOn ? 1.0f : 0.0f);
     if (onPlayChanged)
       onPlayChanged(isOn);
   };
@@ -170,7 +170,7 @@ void GlobalControlBar::setPlayAllButtonState(bool isPlaying) {
 
 void GlobalControlBar::parameterChanged(const juce::String &parameterID,
                                         float newValue) {
-  if (parameterID == "play") {
+  if (parameterID == "playAll") {
     setPlayAllButtonState(newValue >= 0.5f);
   } else if (parameterID == "monitor") {
     updateButtonStyles();
