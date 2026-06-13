@@ -24,6 +24,7 @@ TrackManager::TrackManager() {}
 TrackManager::~TrackManager() {}
 
 void TrackManager::prepare(double sampleRate) {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   currentSampleRate = sampleRate;
   maxLoopLength = static_cast<int>(sampleRate * 60.0);
   baseLoopLength.store(0);
@@ -71,6 +72,7 @@ bool TrackManager::wouldExceedLoopLength(int position) const {
 // Track Management
 
 Track *TrackManager::addTrack() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   auto track = std::make_unique<Track>(nextTrackId++, *this);
   track->prepare(currentSampleRate);
 
@@ -80,6 +82,7 @@ Track *TrackManager::addTrack() {
 }
 
 void TrackManager::removeTrack(int trackId) {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   auto it = std::find_if(tracks.begin(), tracks.end(),
                          [trackId](const std::unique_ptr<Track> &t) {
                            return t->getId() == trackId;
@@ -104,12 +107,33 @@ void TrackManager::removeTrack(int trackId) {
 }
 
 void TrackManager::removeAllTracks() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   tracks.clear();
   resetBaseLoopLength();
   nextTrackId = 0;
 }
 
+std::vector<Track *> TrackManager::getTrackCopies() const {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  std::vector<Track *> copies;
+  copies.reserve(tracks.size());
+  for (auto &track : tracks) {
+    copies.push_back(track.get());
+  }
+  return copies;
+}
+
+int TrackManager::getTrackCount() const {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  return static_cast<int>(tracks.size());
+}
+
 Track *TrackManager::findTrack(int trackId) {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  return findTrackInternal(trackId);
+}
+
+Track *TrackManager::findTrackInternal(int trackId) const {
   auto it = std::find_if(tracks.begin(), tracks.end(),
                          [trackId](const std::unique_ptr<Track> &t) {
                            return t->getId() == trackId;
@@ -121,15 +145,16 @@ Track *TrackManager::findTrack(int trackId) {
 // Track Controls
 
 bool TrackManager::startRecordingTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     // Stop any other track that's recording (only one at a time)
-    stopAllRecording();
+    stopAllRecordingInternal();
 
     track->startRecording();
 
     if (!track->isPlaying()) {
-      startPlaybackTrack(trackId);
+      startPlaybackTrackInternal(trackId);
       return true;
     }
   }
@@ -137,13 +162,19 @@ bool TrackManager::startRecordingTrack(int trackId) {
 }
 
 void TrackManager::stopRecordingTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     track->stopRecording();
   }
 }
 
 void TrackManager::stopAllRecording() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  stopAllRecordingInternal();
+}
+
+void TrackManager::stopAllRecordingInternal() {
   for (auto &track : tracks) {
     if (track->isRecording()) {
       track->stopRecording();
@@ -152,21 +183,28 @@ void TrackManager::stopAllRecording() {
 }
 
 void TrackManager::startPlaybackTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  startPlaybackTrackInternal(trackId);
+}
+
+void TrackManager::startPlaybackTrackInternal(int trackId) {
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     track->startPlayback();
   }
 }
 
 void TrackManager::stopPlaybackTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     track->stopPlayback();
   }
 }
 
 void TrackManager::clearTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     track->requestClearAll();
 
@@ -186,7 +224,8 @@ void TrackManager::clearTrack(int trackId) {
 }
 
 void TrackManager::undoTrack(int trackId) {
-  Track *track = findTrack(trackId);
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
     track->requestUndoLast();
   }
@@ -195,6 +234,7 @@ void TrackManager::undoTrack(int trackId) {
 // Global Controls
 
 void TrackManager::requestClearAll() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   for (auto &track : tracks) {
     track->requestClearAll();
   }
@@ -203,26 +243,34 @@ void TrackManager::requestClearAll() {
 }
 
 void TrackManager::requestUndoLast() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   // Find the track with the most recent loop and undo it
-  Track *track = findTrackWithMostRecentLoop();
+  Track *track = findTrackWithMostRecentLoopInternal();
   if (track != nullptr) {
     track->requestUndoLast();
   }
 }
 
 void TrackManager::startPlayback() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   for (auto &track : tracks) {
     track->startPlayback();
   }
 }
 
 void TrackManager::stopPlayback() {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   for (auto &track : tracks) {
     track->stopPlayback();
   }
 }
 
 bool TrackManager::isPlaying() const {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  return isPlayingInternal();
+}
+
+bool TrackManager::isPlayingInternal() const {
   for (const auto &track : tracks) {
     if (track->isPlaying()) {
       return true;
@@ -232,6 +280,11 @@ bool TrackManager::isPlaying() const {
 }
 
 bool TrackManager::isAnyTrackSoloed() const {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+  return isAnyTrackSoloedInternal();
+}
+
+bool TrackManager::isAnyTrackSoloedInternal() const {
   for (const auto &track : tracks) {
     if (track->isSoloed()) {
       return true;
@@ -242,13 +295,15 @@ bool TrackManager::isAnyTrackSoloed() const {
 
 void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
                                 bool shouldMonitor) {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
+
   // Handle pending requests for all tracks
   for (auto &track : tracks) {
     track->handlePendingRequests();
   }
 
   // Check if any track is soloed
-  bool anySoloed = isAnyTrackSoloed();
+  bool anySoloed = isAnyTrackSoloedInternal();
 
   // First, handle recording for any track that's currently recording
   for (auto &track : tracks) {
@@ -273,12 +328,12 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
   }
 
   // Update time manager read position for synchronized playback
-  if (isPlaying() && hasBaseLoopLength()) {
+  if (isPlayingInternal() && hasBaseLoopLength()) {
     incrementReadPosition(buffer.getNumSamples());
   }
 }
 
-Track *TrackManager::findTrackWithMostRecentLoop() const {
+Track *TrackManager::findTrackWithMostRecentLoopInternal() const {
   // For simplicity, find the track with the most loops
   Track *result = nullptr;
   size_t maxLoops = 0;
@@ -295,6 +350,7 @@ Track *TrackManager::findTrackWithMostRecentLoop() const {
 }
 
 void TrackManager::getState(juce::ValueTree &state, double sampleRate) const {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   state.setProperty("baseLoopLength", getBaseLoopLength(), nullptr);
   state.setProperty("trackCount", static_cast<int>(tracks.size()), nullptr);
 
@@ -311,6 +367,7 @@ void TrackManager::getState(juce::ValueTree &state, double sampleRate) const {
 }
 
 void TrackManager::setState(const juce::ValueTree &state, double sampleRate) {
+  const std::lock_guard<std::mutex> lock(tracksMutex);
   // Restore time manager
   int baseLength = state.getProperty("baseLoopLength", 0);
   if (baseLength > 0) {

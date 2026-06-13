@@ -63,8 +63,8 @@ public:
   Track *addTrack() { return trackManager.addTrack(); }
   void removeTrack(int trackId) { trackManager.removeTrack(trackId); }
   void removeAllTracks() { trackManager.removeAllTracks(); }
-  std::vector<std::unique_ptr<Track>> &getTracks() {
-    return trackManager.getTracks();
+  std::vector<Track *> getTrackCopies() {
+    return trackManager.getTrackCopies();
   }
   Track *findTrack(int trackId) { return trackManager.findTrack(trackId); }
   int getTrackCount() const { return trackManager.getTrackCount(); }

@@ -149,8 +149,10 @@ void LooperAudioProcessorEditor::addInitialTrack() {
 
   // Select the first track by default
   if (audioProcessor.getTrackCount() > 0) {
-    int firstId = audioProcessor.getTracks()[0]->getId();
-    trackContainer.selectTrack(firstId);
+    auto tracks = audioProcessor.getTrackCopies();
+    if (!tracks.empty()) {
+      trackContainer.selectTrack(tracks[0]->getId());
+    }
   }
 
   updateTrackButtons();
@@ -161,14 +163,15 @@ void LooperAudioProcessorEditor::syncTracksWithProcessor() {
   trackContainer.removeAllTrackViews();
 
   // Add track views for all tracks in processor
-  for (auto &track : audioProcessor.getTracks()) {
-    trackContainer.addTrackView(track.get());
+  for (auto *track : audioProcessor.getTrackCopies()) {
+    trackContainer.addTrackView(track);
   }
 }
 
 void LooperAudioProcessorEditor::updateTrackButtons() {
   bool anyPlaying = false;
-  for (auto &track : audioProcessor.getTracks()) {
+  auto tracks = audioProcessor.getTrackCopies();
+  for (auto *track : tracks) {
     if (track->isPlaying())
       anyPlaying = true;
   }
@@ -177,7 +180,7 @@ void LooperAudioProcessorEditor::updateTrackButtons() {
 
   // Update control bar info
   int totalLoops = 0;
-  for (auto &track : audioProcessor.getTracks()) {
+  for (auto *track : tracks) {
     totalLoops += static_cast<int>(track->getLooper().getNumLoops());
   }
   controlBar.setLoopInfo(audioProcessor.getTrackCount(), totalLoops);

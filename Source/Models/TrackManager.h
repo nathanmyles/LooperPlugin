@@ -23,6 +23,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 class Track;
@@ -69,12 +70,9 @@ public:
   Track *addTrack();
   void removeTrack(int trackId);
   void removeAllTracks();
-  std::vector<std::unique_ptr<Track>> &getTracks() { return tracks; }
-  const std::vector<std::unique_ptr<Track>> &getTracks() const {
-    return tracks;
-  }
+  std::vector<Track *> getTrackCopies() const;
   Track *findTrack(int trackId);
-  int getTrackCount() const { return static_cast<int>(tracks.size()); }
+  int getTrackCount() const;
 
   // Track controls
   bool startRecordingTrack(int trackId);
@@ -103,6 +101,8 @@ public:
   void setState(const juce::ValueTree &state, double sampleRate);
 
 private:
+  mutable std::mutex tracksMutex;
+
   std::atomic<int> baseLoopLength{0};
   std::atomic<int> readPosition{0};
 
@@ -112,7 +112,13 @@ private:
   std::vector<std::unique_ptr<Track>> tracks;
   int nextTrackId = 0;
 
-  Track *findTrackWithMostRecentLoop() const;
+  // Internal unlocked helpers (caller must hold tracksMutex)
+  Track *findTrackInternal(int trackId) const;
+  Track *findTrackWithMostRecentLoopInternal() const;
+  void stopAllRecordingInternal();
+  void startPlaybackTrackInternal(int trackId);
+  bool isAnyTrackSoloedInternal() const;
+  bool isPlayingInternal() const;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackManager)
 };
