@@ -178,7 +178,7 @@ void LooperAudioProcessorEditor::updateTrackButtons() {
   // Update control bar info
   int totalLoops = 0;
   for (auto &track : audioProcessor.getTracks()) {
-    totalLoops += static_cast<int>(track->getLooper().getLoops().size());
+    totalLoops += static_cast<int>(track->getLooper().getNumLoops());
   }
   controlBar.setLoopInfo(audioProcessor.getTrackCount(), totalLoops);
 }

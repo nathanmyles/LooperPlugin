@@ -26,6 +26,7 @@ void Looper::prepare(double sampleRate) {
   currentSampleRate = sampleRate;
   maxLoopLength = static_cast<int>(sampleRate * 60.0);
 
+  std::lock_guard<std::mutex> lock(loopsMutex);
   loops.clear();
   baseLoopLength = 0;
   recordingLoopIndex = -1;
@@ -35,6 +36,7 @@ void Looper::prepare(double sampleRate) {
 }
 
 void Looper::startRecording(int currentReadPosition) {
+  std::lock_guard<std::mutex> lock(loopsMutex);
   addNewLoop();
   recordingLoopIndex = static_cast<int>(loops.size()) - 1;
 
@@ -51,6 +53,7 @@ void Looper::startRecording(int currentReadPosition) {
 }
 
 void Looper::stopRecording() {
+  std::lock_guard<std::mutex> lock(loopsMutex);
   if (recordingLoopIndex != -1) {
     auto &loop = loops[static_cast<size_t>(recordingLoopIndex)];
     int currentWritePos = writePosition.load();
@@ -146,10 +149,17 @@ void Looper::processRecording(const juce::AudioBuffer<float> &inputBuffer) {
 
 void Looper::processPlayback(juce::AudioBuffer<float> &outputBuffer,
                              float volume, int sharedReadPosition) {
-  if (!playing || loops.empty())
+  if (!playing)
     return;
 
   const int numSamples = outputBuffer.getNumSamples();
+
+  // Lock loops for reading to prevent race condition
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  bool loopsEmpty = loops.empty();
+
+  if (loopsEmpty)
+    return;
 
   for (int sample = 0; sample < numSamples; ++sample) {
     // Use shared read position from TrackManager, wrapped to base loop length
@@ -211,10 +221,14 @@ void Looper::requestUndoLast() { requestUndo.store(true); }
 
 void Looper::handlePendingRequests() {
   if (requestClear.exchange(false)) {
+    // Lock loops for modification to prevent race condition
+    std::lock_guard<std::mutex> lock(loopsMutex);
     clearAll();
   }
 
   if (requestUndo.exchange(false)) {
+    // Lock loops for modification to prevent race condition
+    std::lock_guard<std::mutex> lock(loopsMutex);
     removeLastLoop();
   }
 }
@@ -291,4 +305,14 @@ void Looper::setState(const juce::ValueTree &state, double sampleRate) {
       loops.push_back(std::move(newLoop));
     }
   }
+}
+
+bool Looper::hasLoops() const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  return !loops.empty();
+}
+
+size_t Looper::getNumLoops() const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  return loops.size();
 }

@@ -91,7 +91,7 @@ void TrackManager::removeTrack(int trackId) {
     // Check if any tracks still have content
     bool hasContent = false;
     for (const auto &track : tracks) {
-      if (!track->getLooper().getLoops().empty()) {
+      if (!track->getLooper().hasLoops()) {
         hasContent = true;
         break;
       }
@@ -173,7 +173,7 @@ void TrackManager::clearTrack(int trackId) {
     // Check if any tracks still have content
     bool hasContent = false;
     for (const auto &t : tracks) {
-      if (!t->getLooper().getLoops().empty()) {
+      if (!t->getLooper().hasLoops()) {
         hasContent = true;
         break;
       }
@@ -284,7 +284,7 @@ Track *TrackManager::findTrackWithMostRecentLoop() const {
   size_t maxLoops = 0;
 
   for (const auto &track : tracks) {
-    size_t loopCount = track->getLooper().getLoops().size();
+    size_t loopCount = track->getLooper().getNumLoops();
     if (loopCount > maxLoops) {
       maxLoops = loopCount;
       result = track.get();

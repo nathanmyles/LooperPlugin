@@ -195,7 +195,7 @@ void TrackView::updateFromTrack() {
 }
 
 void TrackView::refreshLoopCount() {
-  int loopCount = static_cast<int>(track.getLooper().getLoops().size());
+  int loopCount = static_cast<int>(track.getLooper().getNumLoops());
   loopCountLabel.setText("Loops: " + juce::String(loopCount),
                          juce::dontSendNotification);
 }

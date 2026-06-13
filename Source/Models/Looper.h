@@ -21,6 +21,7 @@
 #include <atomic>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 /**
@@ -70,7 +71,8 @@ public:
   void handlePendingRequests();
 
   // Getters
-  const std::vector<std::unique_ptr<Loop>> &getLoops() const { return loops; }
+  bool hasLoops() const;
+  size_t getNumLoops() const;
   int getBaseLoopLength() const { return baseLoopLength; }
   int getWritePosition() const { return writePosition.load(); }
   int getReadPosition() const { return readPosition.load(); }
@@ -80,6 +82,7 @@ public:
   void setState(const juce::ValueTree &state, double sampleRate);
 
 private:
+  mutable std::mutex loopsMutex;
   std::vector<std::unique_ptr<Loop>> loops;
   int baseLoopLength = 0;
   int recordingLoopIndex = -1;
