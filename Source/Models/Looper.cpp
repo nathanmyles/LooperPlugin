@@ -206,7 +206,9 @@ void Looper::applyCrossfade(int loopIndex) {
       auto *channelData = loop->buffer.getWritePointer(channel);
       for (int i = 0; i < fadeSamples; ++i) {
         float alpha = (float)i / (float)fadeSamples;
-        int endSampleIdx = loop->length - fadeSamples + i;
+        // Ensure we don't access beyond the buffer bounds
+        int endSampleIdx =
+            juce::jmin(loop->length - 1, loop->length - fadeSamples + i);
         // Mix start of loop into end of loop
         channelData[endSampleIdx] =
             channelData[endSampleIdx] * (1.0f - alpha) + channelData[i] * alpha;
