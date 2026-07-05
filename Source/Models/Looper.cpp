@@ -242,6 +242,7 @@ void Looper::handlePendingRequests() {
 }
 
 void Looper::getState(juce::ValueTree &state, double sampleRate) const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
   juce::ignoreUnused(sampleRate);
 
   state.setProperty("loopCount", static_cast<int>(loops.size()), nullptr);
@@ -271,6 +272,7 @@ void Looper::getState(juce::ValueTree &state, double sampleRate) const {
 }
 
 void Looper::setState(const juce::ValueTree &state, double sampleRate) {
+  std::lock_guard<std::mutex> lock(loopsMutex);
   int loopCount = state.getProperty("loopCount", 0);
 
   currentSampleRate = sampleRate;
