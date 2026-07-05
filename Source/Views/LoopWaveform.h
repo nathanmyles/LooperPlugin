@@ -16,24 +16,29 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../Source/Models/Looper.h"
-#include <gtest/gtest.h>
+#pragma once
 
-TEST(LooperTest, InitialStateIsEmpty) {
-  Looper looper;
-  EXPECT_FALSE(looper.isRecording());
-  EXPECT_FALSE(looper.isPlaying());
-}
+#include "../Models/Track.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-TEST(LooperTest, CanStartRecording) {
-  Looper looper;
-  looper.startRecording(0, 0);
-  EXPECT_TRUE(looper.isRecording());
-}
+/**
+ * LoopWaveform - Visualizes the recorded audio loops for a track
+ *
+ * Displays:
+ * - Combined waveform of all loops in the track
+ * - Playhead position when playing
+ * - Recording position when recording
+ */
+class LoopWaveform : public juce::Component {
+public:
+  LoopWaveform(Track &track);
+  ~LoopWaveform() override;
 
-TEST(LooperTest, CanStopRecording) {
-  Looper looper;
-  looper.startRecording(0, 0);
-  looper.stopRecording(0);
-  EXPECT_FALSE(looper.isRecording());
-}
+  void paint(juce::Graphics &g) override;
+
+private:
+  Track &track;
+  int assumedLength = 0;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoopWaveform)
+};

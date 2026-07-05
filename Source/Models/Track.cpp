@@ -31,19 +31,19 @@ void Track::prepare(double sampleRate) {
 void Track::startRecording() {
   if (!recording.load()) {
     recording.store(true);
-    looper.startRecording(trackManager.getReadPosition());
+    looper.startRecording(trackManager.getReadPosition(),
+                          trackManager.getBaseLoopLength());
   }
 }
 
 void Track::stopRecording() {
   if (recording.load()) {
+    int recordedLength = looper.getRecordingLength();
     recording.store(false);
-    looper.stopRecording();
+    looper.stopRecording(trackManager.getBaseLoopLength());
 
-    // If this is the first loop, set the base loop length for all tracks
-    int baseLength = looper.getBaseLoopLength();
-    if (baseLength > 0 && trackManager.getBaseLoopLength() == 0) {
-      trackManager.setBaseLoopLength(baseLength);
+    if (recordedLength > 0 && trackManager.getBaseLoopLength() == 0) {
+      trackManager.setBaseLoopLength(recordedLength);
     }
   }
 }
@@ -61,6 +61,14 @@ void Track::stopPlayback() {
 void Track::clearAll() { looper.clearAll(); }
 
 void Track::undoLast() { looper.removeLastLoop(); }
+
+int Track::getReadPosition() const {
+  return trackManager.getWrappedReadPosition();
+}
+
+int Track::getBaseLoopLength() const {
+  return trackManager.getBaseLoopLength();
+}
 
 bool Track::shouldOutput(bool anyTrackSoloed) const {
   if (anyTrackSoloed)

@@ -186,12 +186,10 @@ LooperAudioProcessor::createParameterLayout() {
   layout.add(
       std::make_unique<juce::AudioParameterBool>("record", "Record", false));
   layout.add(std::make_unique<juce::AudioParameterBool>("play", "Play", false));
-  layout.add(
-      std::make_unique<juce::AudioParameterBool>("solo", "Solo", false));
+  layout.add(std::make_unique<juce::AudioParameterBool>("solo", "Solo", false));
   layout.add(
       std::make_unique<juce::AudioParameterBool>("clear", "Clear", false));
-  layout.add(
-      std::make_unique<juce::AudioParameterBool>("undo", "Undo", false));
+  layout.add(std::make_unique<juce::AudioParameterBool>("undo", "Undo", false));
 
   return layout;
 }

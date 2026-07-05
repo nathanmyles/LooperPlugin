@@ -19,6 +19,7 @@
 #pragma once
 
 #include "../Models/Track.h"
+#include "LoopWaveform.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -69,6 +70,7 @@ private:
 
   // UI Components
   juce::Label trackNameLabel;
+  LoopWaveform waveform;
   juce::Slider volumeSlider;
   juce::TextButton recordButton;
   juce::TextButton soloButton;

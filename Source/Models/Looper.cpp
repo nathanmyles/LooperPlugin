@@ -28,48 +28,32 @@ void Looper::prepare(double sampleRate) {
 
   std::lock_guard<std::mutex> lock(loopsMutex);
   loops.clear();
-  baseLoopLength = 0;
   recordingLoopIndex = -1;
-  writePosition = 0;
-  readPosition = 0;
   playing = false;
 }
 
-void Looper::startRecording(int currentReadPosition) {
+void Looper::startRecording(int currentReadPosition, int loopLength) {
   std::lock_guard<std::mutex> lock(loopsMutex);
   addNewLoop();
   recordingLoopIndex = static_cast<int>(loops.size()) - 1;
 
-  // Capture the current playback position as the start offset
-  // This is where in the base loop the overdub will be placed
-  if (baseLoopLength > 0) {
-    loops[recordingLoopIndex]->startOffset =
-        currentReadPosition % baseLoopLength;
+  if (loopLength > 0) {
+    loops[recordingLoopIndex]->startOffset = currentReadPosition % loopLength;
   } else {
     loops[recordingLoopIndex]->startOffset = 0;
   }
-
-  writePosition = 0;
 }
 
-void Looper::stopRecording() {
+void Looper::stopRecording(int loopLength) {
   std::lock_guard<std::mutex> lock(loopsMutex);
   if (recordingLoopIndex != -1) {
     auto &loop = loops[static_cast<size_t>(recordingLoopIndex)];
-    int currentWritePos = writePosition.load();
 
-    if (currentWritePos > 0) {
+    if (loop->length > 0) {
       loop->hasContent = true;
 
-      // If this is the first loop, set base length
-      if (baseLoopLength == 0) {
-        baseLoopLength = currentWritePos;
-      }
+      loop->length = loopLength > 0 ? loopLength : loop->length;
 
-      // Pad loop to base length so all loops are the same length
-      loop->length = baseLoopLength;
-
-      // Apply Crossfade
       applyCrossfade(recordingLoopIndex);
     }
   }
@@ -77,10 +61,7 @@ void Looper::stopRecording() {
   requestStopRecording.store(true);
 }
 
-void Looper::startPlayback() {
-  playing = true;
-  readPosition = 0;
-}
+void Looper::startPlayback() { playing = true; }
 
 void Looper::stopPlayback() { playing = false; }
 
@@ -98,92 +79,73 @@ void Looper::removeLastLoop() {
     // If currently recording this loop, cancel recording
     if (recordingLoopIndex == static_cast<int>(loops.size()) - 1) {
       recordingLoopIndex = -1;
-      writePosition = 0;
       requestStopRecording.store(true);
     }
     loops.pop_back();
-
-    // If we removed the last loop, reset base length
-    if (loops.empty()) {
-      baseLoopLength = 0;
-    }
   }
 }
 
 void Looper::clearAll() {
   loops.clear();
-  baseLoopLength = 0;
   recordingLoopIndex = -1;
-  writePosition = 0;
-  readPosition = 0;
 }
 
-void Looper::processRecording(const juce::AudioBuffer<float> &inputBuffer) {
+void Looper::processRecording(const juce::AudioBuffer<float> &inputBuffer,
+                              int maxRecordLength) {
+  std::lock_guard<std::mutex> lock(loopsMutex);
   if (recordingLoopIndex == -1)
     return;
 
   const int numSamples = inputBuffer.getNumSamples();
 
   auto &currentLoop = loops[static_cast<size_t>(recordingLoopIndex)];
-  int maxRecordLength = (baseLoopLength > 0) ? baseLoopLength : maxLoopLength;
   int samplesToRecord =
-      juce::jmin(numSamples, maxRecordLength - writePosition.load());
+      juce::jmin(numSamples, maxRecordLength - currentLoop->length);
 
   if (samplesToRecord > 0) {
     for (int channel = 0; channel < numChannels; ++channel) {
-      currentLoop->buffer.copyFrom(channel, writePosition.load(), inputBuffer,
+      currentLoop->buffer.copyFrom(channel, currentLoop->length, inputBuffer,
                                    channel, 0, samplesToRecord);
     }
 
-    writePosition += samplesToRecord;
-    currentLoop->length = writePosition.load();
+    currentLoop->length += samplesToRecord;
 
-    // If we've hit the base loop length or max, stop
-    if (writePosition.load() >= maxRecordLength && baseLoopLength > 0) {
-      requestStopRecording.store(true);
-    } else if (writePosition.load() >= maxLoopLength) {
+    if (currentLoop->length >= maxRecordLength) {
       requestStopRecording.store(true);
     }
   }
 }
 
 void Looper::processPlayback(juce::AudioBuffer<float> &outputBuffer,
-                             float volume, int sharedReadPosition) {
-  if (!playing)
+                             float volume, int readPosition, int loopLength) {
+  if (!playing || loopLength <= 0)
     return;
 
   const int numSamples = outputBuffer.getNumSamples();
 
-  // Lock loops for reading to prevent race condition
   std::lock_guard<std::mutex> lock(loopsMutex);
-  bool loopsEmpty = loops.empty();
 
-  if (loopsEmpty)
+  if (loops.empty())
     return;
 
   for (int sample = 0; sample < numSamples; ++sample) {
-    // Use shared read position from TrackManager, wrapped to base loop length
-    int readPos = sharedReadPosition + sample;
-    if (baseLoopLength > 0 && readPos >= baseLoopLength) {
-      readPos = readPos % baseLoopLength;
-    }
+    int pos = readPosition + sample;
+    if (pos >= loopLength)
+      pos = pos % loopLength;
 
     for (int channel = 0; channel < numChannels; ++channel) {
       float mixedSample = 0.0f;
 
-      // Mix all loops
-      for (auto &loop : loops) {
-        if (loop->hasContent) {
-          // Calculate position within this loop, accounting for start offset
-          // readPos is the global position, we need to find where we are
-          // relative to when this loop started recording
-          int effectivePos =
-              (readPos - loop->startOffset + baseLoopLength) % baseLoopLength;
+      for (size_t li = 0; li < loops.size(); ++li) {
+        auto &loop = loops[li];
+        bool isRecordingLoop = (static_cast<int>(li) == recordingLoopIndex);
+        if (!loop->hasContent && !isRecordingLoop)
+          continue;
 
-          // Only play if we're within the recorded portion of this loop
-          if (effectivePos < loop->length) {
-            mixedSample += loop->buffer.getSample(channel, effectivePos);
-          }
+        int effectivePos = (pos - loop->startOffset + loopLength) % loopLength;
+
+        if (effectivePos < loop->length) {
+          mixedSample += loop->buffer.getSample(channel, effectivePos);
         }
       }
 
@@ -239,7 +201,6 @@ void Looper::getState(juce::ValueTree &state, double sampleRate) const {
   juce::ignoreUnused(sampleRate);
 
   state.setProperty("loopCount", static_cast<int>(loops.size()), nullptr);
-  state.setProperty("baseLoopLength", baseLoopLength, nullptr);
 
   // Save each loop's audio data
   for (size_t i = 0; i < loops.size(); ++i) {
@@ -268,9 +229,7 @@ void Looper::getState(juce::ValueTree &state, double sampleRate) const {
 }
 
 void Looper::setState(const juce::ValueTree &state, double sampleRate) {
-  // Restore loops
   int loopCount = state.getProperty("loopCount", 0);
-  baseLoopLength = state.getProperty("baseLoopLength", 0);
 
   currentSampleRate = sampleRate;
   maxLoopLength = static_cast<int>(sampleRate * 60.0);
@@ -317,4 +276,61 @@ bool Looper::hasLoops() const {
 size_t Looper::getNumLoops() const {
   std::lock_guard<std::mutex> lock(loopsMutex);
   return loops.size();
+}
+
+int Looper::getRecordingOffset() const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  if (recordingLoopIndex >= 0 &&
+      recordingLoopIndex < static_cast<int>(loops.size())) {
+    return loops[static_cast<size_t>(recordingLoopIndex)]->startOffset;
+  }
+  return 0;
+}
+
+int Looper::getRecordingLength() const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  if (recordingLoopIndex >= 0 &&
+      recordingLoopIndex < static_cast<int>(loops.size())) {
+    return loops[static_cast<size_t>(recordingLoopIndex)]->length;
+  }
+  return 0;
+}
+
+std::vector<float> Looper::getWaveformPeaks(int numBins, int channel,
+                                            int effectiveLength) const {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  std::vector<float> peaks(numBins, 0.0f);
+
+  if (loops.empty()) {
+    return peaks;
+  }
+
+  if (effectiveLength <= 0) {
+    return peaks;
+  }
+  int effectiveLen = effectiveLength;
+
+  for (size_t i = 0; i < loops.size(); ++i) {
+    auto &loop = loops[i];
+    bool isRecording = (static_cast<int>(i) == recordingLoopIndex);
+    if ((!loop->hasContent && !isRecording) || loop->length <= 0) {
+      continue;
+    }
+
+    int safeChannel = juce::jmin(channel, loop->buffer.getNumChannels() - 1);
+
+    for (int bin = 0; bin < numBins; ++bin) {
+      int globalPos = static_cast<int>(
+          (static_cast<int64_t>(bin) * effectiveLen) / numBins);
+      int effectivePos =
+          (globalPos - loop->startOffset + effectiveLen) % effectiveLen;
+
+      if (effectivePos < loop->length) {
+        float samp = loop->buffer.getSample(safeChannel, effectivePos);
+        peaks[bin] = juce::jmax(peaks[bin], std::abs(samp));
+      }
+    }
+  }
+
+  return peaks;
 }

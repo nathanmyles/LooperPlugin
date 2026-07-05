@@ -18,7 +18,7 @@
 
 #include "TrackView.h"
 
-TrackView::TrackView(int id, Track &t) : trackId(id), track(t) {
+TrackView::TrackView(int id, Track &t) : trackId(id), track(t), waveform(t) {
   setupComponents();
   updateFromTrack();
 }
@@ -108,6 +108,9 @@ void TrackView::setupComponents() {
   };
   addAndMakeVisible(removeButton);
 
+  // Waveform visualization
+  addAndMakeVisible(waveform);
+
   // Loop count label
   loopCountLabel.setText("Loops: 0", juce::dontSendNotification);
   loopCountLabel.setJustificationType(juce::Justification::centred);
@@ -145,42 +148,45 @@ void TrackView::mouseDown(const juce::MouseEvent &event) {
 void TrackView::resized() {
   auto bounds = getLocalBounds().reduced(5);
 
-  // Layout from top to bottom
   const int buttonHeight = 25;
   const int labelHeight = 20;
 
-  // Track name at top
-  trackNameLabel.setBounds(bounds.removeFromTop(labelHeight));
+  // Track name + remove button on the same row
+  auto topRow = bounds.removeFromTop(labelHeight);
+  removeButton.setBounds(topRow.removeFromRight(20));
+  trackNameLabel.setBounds(topRow);
+  bounds.removeFromTop(3);
+
+  // Waveform visualization
+  waveform.setBounds(bounds.removeFromTop(70));
   bounds.removeFromTop(5);
 
-  // Remove button (small, top right)
-  auto topRow = bounds.removeFromTop(buttonHeight);
-  removeButton.setBounds(topRow.removeFromRight(30));
+  // Reserve space for buttons at the bottom
+  const int buttonsArea = buttonHeight * 5 + 3 * 4 + labelHeight + 5;
+  auto buttonSection = bounds.removeFromBottom(buttonsArea);
 
-  // Volume slider (takes most of the space)
-  volumeSlider.setBounds(bounds.removeFromTop(120));
-  bounds.removeFromTop(10);
+  recordButton.setBounds(buttonSection.removeFromTop(buttonHeight));
+  buttonSection.removeFromTop(3);
 
-  // Record button
-  recordButton.setBounds(bounds.removeFromTop(buttonHeight));
-  bounds.removeFromTop(5);
+  playButton.setBounds(buttonSection.removeFromTop(buttonHeight));
+  buttonSection.removeFromTop(3);
 
-  // Play button
-  playButton.setBounds(bounds.removeFromTop(buttonHeight));
-  bounds.removeFromTop(5);
+  soloButton.setBounds(buttonSection.removeFromTop(buttonHeight));
+  buttonSection.removeFromTop(3);
 
-  // Solo button
-  soloButton.setBounds(bounds.removeFromTop(buttonHeight));
-  bounds.removeFromTop(5);
+  clearButton.setBounds(buttonSection.removeFromTop(buttonHeight));
+  buttonSection.removeFromTop(3);
 
-  // Clear and Undo buttons
-  clearButton.setBounds(bounds.removeFromTop(buttonHeight));
-  bounds.removeFromTop(5);
-  undoButton.setBounds(bounds.removeFromTop(buttonHeight));
-  bounds.removeFromTop(10);
+  undoButton.setBounds(buttonSection.removeFromTop(buttonHeight));
+  buttonSection.removeFromTop(5);
 
-  // Loop count
-  loopCountLabel.setBounds(bounds.removeFromTop(labelHeight));
+  loopCountLabel.setBounds(buttonSection.removeFromTop(labelHeight));
+
+  // Leave room for the text box below the slider
+  bounds.removeFromBottom(20);
+
+  // Volume slider takes whatever space is left
+  volumeSlider.setBounds(bounds);
 }
 
 void TrackView::updateFromTrack() {
@@ -190,6 +196,7 @@ void TrackView::updateFromTrack() {
   recordButton.setToggleState(track.isRecording(), juce::dontSendNotification);
   playButton.setToggleState(track.isPlaying(), juce::dontSendNotification);
 
+  waveform.repaint();
   updateButtonStyles();
   refreshLoopCount();
 }

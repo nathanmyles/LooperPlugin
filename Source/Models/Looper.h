@@ -45,9 +45,8 @@ public:
   // Initialize the looper with sample rate
   void prepare(double sampleRate);
 
-  // Recording control
-  void startRecording(int currentReadPosition);
-  void stopRecording();
+  void startRecording(int currentReadPosition, int loopLength);
+  void stopRecording(int loopLength);
   bool isRecording() const { return recordingLoopIndex != -1; }
 
   // Playback control
@@ -60,22 +59,31 @@ public:
   void removeLastLoop();
   void clearAll();
 
-  // Audio processing
-  void processRecording(const juce::AudioBuffer<float> &inputBuffer);
+  void processRecording(const juce::AudioBuffer<float> &inputBuffer,
+                        int maxRecordLength);
   void processPlayback(juce::AudioBuffer<float> &outputBuffer, float volume,
-                       int sharedReadPosition);
+                       int readPosition, int loopLength);
 
   // Thread-safe actions (to be called from non-audio thread)
   void requestClearAll();
   void requestUndoLast();
   void handlePendingRequests();
 
-  // Getters
   bool hasLoops() const;
   size_t getNumLoops() const;
-  int getBaseLoopLength() const { return baseLoopLength; }
-  int getWritePosition() const { return writePosition.load(); }
-  int getReadPosition() const { return readPosition.load(); }
+  double getSampleRate() const { return currentSampleRate; }
+
+  // Start offset of the currently-recording loop (for syncing write head)
+  int getRecordingOffset() const;
+
+  // Total length recorded in the currently-recording loop
+  int getRecordingLength() const;
+
+  // Thread-safe waveform peak extraction for visualization
+  // Fills `numBins` peak values from the combined loop audio
+  // If effectiveLength > 0, it overrides the base loop length for display
+  std::vector<float> getWaveformPeaks(int numBins, int channel = 0,
+                                      int effectiveLength = 0) const;
 
   // State serialization
   void getState(juce::ValueTree &state, double sampleRate) const;
@@ -84,10 +92,7 @@ public:
 private:
   mutable std::mutex loopsMutex;
   std::vector<std::unique_ptr<Loop>> loops;
-  int baseLoopLength = 0;
   int recordingLoopIndex = -1;
-  std::atomic<int> writePosition{0};
-  std::atomic<int> readPosition{0};
   bool playing = false;
 
   double currentSampleRate = 44100.0;

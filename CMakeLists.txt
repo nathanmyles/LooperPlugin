@@ -57,6 +57,8 @@ target_sources(LooperPlugin
         Source/Models/Track.cpp
         Source/Models/Track.h
         # Views
+        Source/Views/LoopWaveform.cpp
+        Source/Views/LoopWaveform.h
         Source/Views/TrackView.cpp
         Source/Views/TrackView.h
         Source/Views/TrackContainer.cpp

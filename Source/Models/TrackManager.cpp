@@ -94,7 +94,7 @@ void TrackManager::removeTrack(int trackId) {
     // Check if any tracks still have content
     bool hasContent = false;
     for (const auto &track : tracks) {
-      if (!track->getLooper().hasLoops()) {
+      if (track->getLooper().hasLoops()) {
         hasContent = true;
         break;
       }
@@ -190,7 +190,11 @@ void TrackManager::startPlaybackTrack(int trackId) {
 void TrackManager::startPlaybackTrackInternal(int trackId) {
   Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
+    bool wasAnyPlaying = isPlayingInternal();
     track->startPlayback();
+    if (!wasAnyPlaying) {
+      resetReadPosition();
+    }
   }
 }
 
@@ -211,7 +215,7 @@ void TrackManager::clearTrack(int trackId) {
     // Check if any tracks still have content
     bool hasContent = false;
     for (const auto &t : tracks) {
-      if (!t->getLooper().hasLoops()) {
+      if (t->getLooper().hasLoops()) {
         hasContent = true;
         break;
       }
@@ -235,6 +239,8 @@ void TrackManager::undoTrack(int trackId) {
 
 void TrackManager::requestClearAll() {
   const std::lock_guard<std::mutex> lock(tracksMutex);
+  // Stop all recording first so we don't write into freshly-emptied loops
+  stopAllRecordingInternal();
   for (auto &track : tracks) {
     track->requestClearAll();
   }
@@ -247,14 +253,20 @@ void TrackManager::requestUndoLast() {
   // Find the track with the most recent loop and undo it
   Track *track = findTrackWithMostRecentLoopInternal();
   if (track != nullptr) {
+    // Stop recording on this track to prevent writing into a just-removed loop
+    stopAllRecordingInternal();
     track->requestUndoLast();
   }
 }
 
 void TrackManager::startPlayback() {
   const std::lock_guard<std::mutex> lock(tracksMutex);
+  bool wasAnyPlaying = isPlayingInternal();
   for (auto &track : tracks) {
     track->startPlayback();
+  }
+  if (!wasAnyPlaying) {
+    resetReadPosition();
   }
 }
 
@@ -305,10 +317,13 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
   // Check if any track is soloed
   bool anySoloed = isAnyTrackSoloedInternal();
 
+  int loopLen = getBaseLoopLength();
+
   // First, handle recording for any track that's currently recording
   for (auto &track : tracks) {
     if (track->isRecording()) {
-      track->getLooper().processRecording(buffer);
+      int maxRecordLen = loopLen > 0 ? loopLen : maxLoopLength;
+      track->getLooper().processRecording(buffer, maxRecordLen);
     }
   }
 
@@ -323,12 +338,12 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
     if (track->shouldOutput(anySoloed)) {
       float effectiveVolume = track->getEffectiveVolume(anySoloed);
       track->getLooper().processPlayback(buffer, effectiveVolume,
-                                         currentReadPos);
+                                         currentReadPos, loopLen);
     }
   }
 
   // Update time manager read position for synchronized playback
-  if (isPlayingInternal() && hasBaseLoopLength()) {
+  if (isPlayingInternal() && loopLen > 0) {
     incrementReadPosition(buffer.getNumSamples());
   }
 }

@@ -23,7 +23,8 @@
 #include "Views/TrackContainer.h"
 
 class LooperAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                   public juce::Timer {
+                                   public juce::Timer,
+                                   public juce::KeyListener {
 public:
   LooperAudioProcessorEditor(LooperAudioProcessor &);
   ~LooperAudioProcessorEditor() override;
@@ -33,6 +34,10 @@ public:
 
   // Timer callback for UI updates
   void timerCallback() override;
+
+  // KeyListener - intercepts keys regardless of focus
+  bool keyPressed(const juce::KeyPress &key,
+                  juce::Component *originatingComponent) override;
 
 private:
   LooperAudioProcessor &audioProcessor;
@@ -45,7 +50,6 @@ private:
   void addInitialTrack();
   void updateTrackButtons();
   void syncTracksWithProcessor();
-  bool keyPressed(const juce::KeyPress &key) override;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LooperAudioProcessorEditor)
 };

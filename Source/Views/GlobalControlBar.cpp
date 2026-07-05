@@ -49,7 +49,8 @@ void GlobalControlBar::setupComponents() {
   playButton.setButtonText("Play All");
   playButton.onClick = [this]() {
     bool isOn = playButton.getToggleState();
-    parameters.getParameter("playAll")->setValueNotifyingHost(isOn ? 1.0f : 0.0f);
+    parameters.getParameter("playAll")->setValueNotifyingHost(isOn ? 1.0f
+                                                                   : 0.0f);
     if (onPlayChanged)
       onPlayChanged(isOn);
   };

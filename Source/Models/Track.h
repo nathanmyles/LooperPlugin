@@ -65,6 +65,9 @@ public:
   int getId() const { return trackId; }
   juce::String getName() const { return "Track " + juce::String(trackId + 1); }
 
+  int getReadPosition() const;
+  int getBaseLoopLength() const;
+
   // Clear and undo
   void clearAll();
   void undoLast();

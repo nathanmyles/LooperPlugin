@@ -98,9 +98,7 @@ void TrackContainer::addTrackView(Track *track) {
     }
   };
 
-  trackView->onTrackClicked = [this](int trackId) {
-    selectTrack(trackId);
-  };
+  trackView->onTrackClicked = [this](int trackId) { selectTrack(trackId); };
 
   int id = track->getId();
   trackView->isSelectedCallback = [this, id]() {

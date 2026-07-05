@@ -22,8 +22,9 @@
 #include "Models/TrackManager.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class LooperAudioProcessor : public juce::AudioProcessor,
-                             public juce::AudioProcessorValueTreeState::Listener {
+class LooperAudioProcessor
+    : public juce::AudioProcessor,
+      public juce::AudioProcessorValueTreeState::Listener {
 public:
   LooperAudioProcessor();
   ~LooperAudioProcessor() override;

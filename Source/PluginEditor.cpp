@@ -39,8 +39,8 @@ LooperAudioProcessorEditor::LooperAudioProcessorEditor(LooperAudioProcessor &p)
   // Start timer for UI updates (30fps)
   startTimer(33);
 
-  // Enable keyboard focus
-  setWantsKeyboardFocus(true);
+  // Intercept key events across all child components
+  addKeyListener(this);
 }
 
 LooperAudioProcessorEditor::~LooperAudioProcessorEditor() { stopTimer(); }
@@ -117,7 +117,12 @@ void LooperAudioProcessorEditor::setupCallbacks() {
     if (isPlaying) {
       audioProcessor.startPlaybackTrack(trackId);
     } else {
-      audioProcessor.stopPlaybackTrack(trackId);
+      if (audioProcessor.findTrack(trackId) != nullptr &&
+          audioProcessor.findTrack(trackId)->isRecording()) {
+        audioProcessor.stopRecordingTrack(trackId);
+      } else {
+        audioProcessor.stopPlaybackTrack(trackId);
+      }
     }
     if (trackId == audioProcessor.getCurrentTrackId()) {
       audioProcessor.syncParamsWithCurrentTrack();
@@ -186,7 +191,14 @@ void LooperAudioProcessorEditor::updateTrackButtons() {
   controlBar.setLoopInfo(audioProcessor.getTrackCount(), totalLoops);
 }
 
-bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key) {
+bool LooperAudioProcessorEditor::keyPressed(const juce::KeyPress &key,
+                                            juce::Component *) {
+  // Don't consume typed characters when editing text
+  if (dynamic_cast<juce::TextEditor *>(
+          juce::Component::getCurrentlyFocusedComponent()) != nullptr) {
+    return false;
+  }
+
   int selectedId = trackContainer.getSelectedTrackId();
   if (selectedId < 0)
     return false;
