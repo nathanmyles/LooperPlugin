@@ -17,6 +17,7 @@
  */
 
 #include "Looper.h"
+#include <cmath>
 
 Looper::Looper() {}
 
@@ -149,7 +150,7 @@ void Looper::processPlayback(juce::AudioBuffer<float> &outputBuffer,
         }
       }
 
-      outputBuffer.addSample(channel, sample, mixedSample * volume);
+      outputBuffer.addSample(channel, sample, std::tanh(mixedSample) * volume);
     }
   }
 }
