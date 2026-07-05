@@ -47,7 +47,7 @@ void TrackManager::incrementReadPosition(int samples) {
 
   // Wrap around if we've exceeded the base loop length
   if (baseLength > 0 && newPos >= baseLength) {
-    newPos = newPos % baseLength;
+    newPos %= baseLength;
   }
 
   readPosition.store(newPos);
@@ -318,12 +318,16 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
   bool anySoloed = isAnyTrackSoloedInternal();
 
   int loopLen = getBaseLoopLength();
+  int currentPosition = getWrappedReadPosition();
+  bool anyRecording = false;
 
   // First, handle recording for any track that's currently recording
   for (auto &track : tracks) {
     if (track->isRecording()) {
+      anyRecording = true;
       int maxRecordLen = loopLen > 0 ? loopLen : maxLoopLength;
-      track->getLooper().processRecording(buffer, maxRecordLen);
+      track->getLooper().processRecording(buffer, maxRecordLen,
+                                          currentPosition);
     }
   }
 
@@ -342,8 +346,8 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
     }
   }
 
-  // Update time manager read position for synchronized playback
-  if (isPlayingInternal() && loopLen > 0) {
+  // Advance the shared read position for synchronized playback/recording
+  if (isPlayingInternal() || anyRecording) {
     incrementReadPosition(buffer.getNumSamples());
   }
 }

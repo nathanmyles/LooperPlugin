@@ -35,7 +35,6 @@ public:
   struct Loop {
     juce::AudioBuffer<float> buffer;
     int length = 0;
-    int startOffset = 0; // Where in the base loop this recording started
     bool hasContent = false;
   };
 
@@ -60,7 +59,7 @@ public:
   void clearAll();
 
   void processRecording(const juce::AudioBuffer<float> &inputBuffer,
-                        int maxRecordLength);
+                        int maxRecordLength, int currentPosition);
   void processPlayback(juce::AudioBuffer<float> &outputBuffer, float volume,
                        int readPosition, int loopLength);
 
@@ -72,9 +71,6 @@ public:
   bool hasLoops() const;
   size_t getNumLoops() const;
   double getSampleRate() const { return currentSampleRate; }
-
-  // Start offset of the currently-recording loop (for syncing write head)
-  int getRecordingOffset() const;
 
   // Total length recorded in the currently-recording loop
   int getRecordingLength() const;
@@ -95,6 +91,9 @@ private:
   int recordingLoopIndex = -1;
   bool playing = false;
 
+  int currentLoopSamples =
+      0; // Total samples written to the current recording loop
+
   double currentSampleRate = 44100.0;
   int maxLoopLength = 44100 * 60;
   int numChannels = 2;
@@ -105,7 +104,6 @@ private:
   // Thread-safe request flags
   std::atomic<bool> requestClear{false};
   std::atomic<bool> requestUndo{false};
-  std::atomic<bool> requestStopRecording{false};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Looper)
 };

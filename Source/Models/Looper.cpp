@@ -37,12 +37,7 @@ void Looper::startRecording(int currentReadPosition, int loopLength) {
   std::lock_guard<std::mutex> lock(loopsMutex);
   addNewLoop();
   recordingLoopIndex = static_cast<int>(loops.size()) - 1;
-
-  if (loopLength > 0) {
-    loops[recordingLoopIndex]->startOffset = currentReadPosition % loopLength;
-  } else {
-    loops[recordingLoopIndex]->startOffset = 0;
-  }
+  currentLoopSamples = 0;
 }
 
 void Looper::stopRecording(int loopLength) {
@@ -50,16 +45,13 @@ void Looper::stopRecording(int loopLength) {
   if (recordingLoopIndex != -1) {
     auto &loop = loops[static_cast<size_t>(recordingLoopIndex)];
 
-    if (loop->length > 0) {
+    if (currentLoopSamples > 0) {
       loop->hasContent = true;
-
-      loop->length = loopLength > 0 ? loopLength : loop->length;
-
+      loop->length = loopLength > 0 ? loopLength : currentLoopSamples;
       applyCrossfade(recordingLoopIndex);
     }
   }
   recordingLoopIndex = -1;
-  requestStopRecording.store(true);
 }
 
 void Looper::startPlayback() { playing = true; }
@@ -77,10 +69,8 @@ void Looper::addNewLoop() {
 
 void Looper::removeLastLoop() {
   if (!loops.empty()) {
-    // If currently recording this loop, cancel recording
     if (recordingLoopIndex == static_cast<int>(loops.size()) - 1) {
       recordingLoopIndex = -1;
-      requestStopRecording.store(true);
     }
     loops.pop_back();
   }
@@ -92,27 +82,55 @@ void Looper::clearAll() {
 }
 
 void Looper::processRecording(const juce::AudioBuffer<float> &inputBuffer,
-                              int maxRecordLength) {
+                              int maxRecordLength, int currentPosition) {
   std::lock_guard<std::mutex> lock(loopsMutex);
-  if (recordingLoopIndex == -1)
+  if (recordingLoopIndex == -1) {
     return;
+  }
 
   const int numSamples = inputBuffer.getNumSamples();
+  int offset = 0;
+  int remaining = numSamples;
 
-  auto &currentLoop = loops[static_cast<size_t>(recordingLoopIndex)];
-  int samplesToRecord =
-      juce::jmin(numSamples, maxRecordLength - currentLoop->length);
+  while (remaining > 0 && recordingLoopIndex != -1) {
+    int idx = recordingLoopIndex;
+    auto &loop = loops[static_cast<size_t>(idx)];
 
-  if (samplesToRecord > 0) {
-    for (int channel = 0; channel < numChannels; ++channel) {
-      currentLoop->buffer.copyFrom(channel, currentLoop->length, inputBuffer,
-                                   channel, 0, samplesToRecord);
+    int space = maxRecordLength - currentLoopSamples;
+    int toWrite = juce::jmin(remaining, space);
+
+    if (toWrite > 0) {
+      int writePos = (currentPosition + offset) % maxRecordLength;
+      int firstLen = juce::jmin(toWrite, maxRecordLength - writePos);
+
+      for (int channel = 0; channel < numChannels; ++channel) {
+        loop->buffer.copyFrom(channel, writePos, inputBuffer, channel, offset,
+                              firstLen);
+      }
+      currentLoopSamples += firstLen;
+      offset += firstLen;
+      remaining -= firstLen;
+
+      if (firstLen < toWrite) {
+        int secondLen = toWrite - firstLen;
+        for (int channel = 0; channel < numChannels; ++channel) {
+          loop->buffer.copyFrom(channel, 0, inputBuffer, channel, offset,
+                                secondLen);
+        }
+        currentLoopSamples += secondLen;
+        offset += secondLen;
+        remaining -= secondLen;
+      }
     }
 
-    currentLoop->length += samplesToRecord;
+    if (currentLoopSamples >= maxRecordLength) {
+      loop->hasContent = true;
+      loop->length = maxRecordLength;
+      applyCrossfade(idx);
 
-    if (currentLoop->length >= maxRecordLength) {
-      requestStopRecording.store(true);
+      addNewLoop();
+      recordingLoopIndex = static_cast<int>(loops.size()) - 1;
+      currentLoopSamples = 0;
     }
   }
 }
@@ -143,11 +161,9 @@ void Looper::processPlayback(juce::AudioBuffer<float> &outputBuffer,
         if (!loop->hasContent && !isRecordingLoop)
           continue;
 
-        int effectivePos = (pos - loop->startOffset + loopLength) % loopLength;
-
-        if (effectivePos < loop->length) {
-          mixedSample += loop->buffer.getSample(channel, effectivePos);
-        }
+        // Read directly at the cycle position. Unwritten positions in the
+        // recording loop are zero (buffer was cleared before recording).
+        mixedSample += loop->buffer.getSample(channel, pos);
       }
 
       outputBuffer.addSample(channel, sample, std::tanh(mixedSample) * volume);
@@ -213,9 +229,7 @@ void Looper::getState(juce::ValueTree &state, double sampleRate) const {
     juce::MemoryBlock loopData;
     juce::MemoryOutputStream loopStream(loopData, true);
 
-    // Write loop metadata
     loopStream.writeInt(loop->length);
-    loopStream.writeInt(loop->startOffset);
     loopStream.writeBool(loop->hasContent);
 
     // Write audio data
@@ -253,7 +267,6 @@ void Looper::setState(const juce::ValueTree &state, double sampleRate) {
       newLoop->buffer.clear();
 
       newLoop->length = loopStream.readInt();
-      newLoop->startOffset = loopStream.readInt();
       newLoop->hasContent = loopStream.readBool();
 
       if (newLoop->hasContent && newLoop->length > 0) {
@@ -281,20 +294,11 @@ size_t Looper::getNumLoops() const {
   return loops.size();
 }
 
-int Looper::getRecordingOffset() const {
-  std::lock_guard<std::mutex> lock(loopsMutex);
-  if (recordingLoopIndex >= 0 &&
-      recordingLoopIndex < static_cast<int>(loops.size())) {
-    return loops[static_cast<size_t>(recordingLoopIndex)]->startOffset;
-  }
-  return 0;
-}
-
 int Looper::getRecordingLength() const {
   std::lock_guard<std::mutex> lock(loopsMutex);
   if (recordingLoopIndex >= 0 &&
       recordingLoopIndex < static_cast<int>(loops.size())) {
-    return loops[static_cast<size_t>(recordingLoopIndex)]->length;
+    return currentLoopSamples;
   }
   return 0;
 }
@@ -315,8 +319,8 @@ std::vector<float> Looper::getWaveformPeaks(int numBins, int channel,
 
   for (size_t i = 0; i < loops.size(); ++i) {
     auto &loop = loops[i];
-    bool isRecording = (static_cast<int>(i) == recordingLoopIndex);
-    if ((!loop->hasContent && !isRecording) || loop->length <= 0) {
+    bool isRecordingLoop = (static_cast<int>(i) == recordingLoopIndex);
+    if (!loop->hasContent && !isRecordingLoop) {
       continue;
     }
 
@@ -325,13 +329,16 @@ std::vector<float> Looper::getWaveformPeaks(int numBins, int channel,
     for (int bin = 0; bin < numBins; ++bin) {
       int globalPos = static_cast<int>(
           (static_cast<int64_t>(bin) * effectiveLen) / numBins);
-      int effectivePos =
-          (globalPos - loop->startOffset + effectiveLen) % effectiveLen;
+      int readPos = globalPos % effectiveLen;
 
-      if (effectivePos < loop->length) {
-        float samp = loop->buffer.getSample(safeChannel, effectivePos);
-        peaks[bin] = juce::jmax(peaks[bin], std::abs(samp));
+      // Recording loop: unwritten positions are zero (buffer was cleared).
+      // Finalized loops: only valid up to loop->length.
+      if (loop->hasContent && readPos >= loop->length) {
+        continue;
       }
+
+      float samp = loop->buffer.getSample(safeChannel, readPos);
+      peaks[bin] = juce::jmax(peaks[bin], std::abs(samp));
     }
   }
 
