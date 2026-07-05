@@ -210,7 +210,11 @@ void TrackManager::clearTrack(int trackId) {
   const std::lock_guard<std::mutex> lock(tracksMutex);
   Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
-    track->requestClearAll();
+    if (track->isRecording()) {
+      track->stopRecording();
+    }
+
+    track->getLooper().clearAll();
 
     // Check if any tracks still have content
     bool hasContent = false;
@@ -231,6 +235,10 @@ void TrackManager::undoTrack(int trackId) {
   const std::lock_guard<std::mutex> lock(tracksMutex);
   Track *track = findTrackInternal(trackId);
   if (track != nullptr) {
+    if (track->isRecording()) {
+      track->stopRecording();
+    }
+
     track->requestUndoLast();
   }
 }
