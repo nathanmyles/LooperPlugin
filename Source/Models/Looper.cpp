@@ -48,6 +48,7 @@ void Looper::stopRecording(int loopLength) {
     if (currentLoopSamples > 0) {
       loop->hasContent = true;
       loop->length = loopLength > 0 ? loopLength : currentLoopSamples;
+      applyFadeOut(recordingLoopIndex);
       applyCrossfade(recordingLoopIndex);
     }
   }
@@ -111,26 +112,28 @@ void Looper::processRecording(const juce::AudioBuffer<float> &inputBuffer,
       offset += firstLen;
       remaining -= firstLen;
 
-      if (firstLen < toWrite) {
-        int secondLen = toWrite - firstLen;
-        for (int channel = 0; channel < numChannels; ++channel) {
-          loop->buffer.copyFrom(channel, 0, inputBuffer, channel, offset,
-                                secondLen);
+      if (writePos + firstLen >= maxRecordLength) {
+        // Reached cycle boundary (position 0) — finalize and start a new loop
+        loop->hasContent = true;
+        loop->length = maxRecordLength;
+        applyCrossfade(idx);
+
+        addNewLoop();
+        recordingLoopIndex = static_cast<int>(loops.size()) - 1;
+        currentLoopSamples = 0;
+
+        if (firstLen < toWrite) {
+          int secondLen = toWrite - firstLen;
+          auto &newLoop = loops[static_cast<size_t>(recordingLoopIndex)];
+          for (int channel = 0; channel < numChannels; ++channel) {
+            newLoop->buffer.copyFrom(channel, 0, inputBuffer, channel, offset,
+                                     secondLen);
+          }
+          currentLoopSamples = secondLen;
+          offset += secondLen;
+          remaining -= secondLen;
         }
-        currentLoopSamples += secondLen;
-        offset += secondLen;
-        remaining -= secondLen;
       }
-    }
-
-    if (currentLoopSamples >= maxRecordLength) {
-      loop->hasContent = true;
-      loop->length = maxRecordLength;
-      applyCrossfade(idx);
-
-      addNewLoop();
-      recordingLoopIndex = static_cast<int>(loops.size()) - 1;
-      currentLoopSamples = 0;
     }
   }
 }
@@ -161,8 +164,6 @@ void Looper::processPlayback(juce::AudioBuffer<float> &outputBuffer,
         if (!loop->hasContent && !isRecordingLoop)
           continue;
 
-        // Read directly at the cycle position. Unwritten positions in the
-        // recording loop are zero (buffer was cleared before recording).
         mixedSample += loop->buffer.getSample(channel, pos);
       }
 
@@ -177,7 +178,6 @@ void Looper::applyCrossfade(int loopIndex) {
 
   auto &loop = loops[static_cast<size_t>(loopIndex)];
 
-  // Apply Crossfade (approx 10ms)
   int fadeSamples = juce::jmin(loop->length, (int)(currentSampleRate * 0.01));
 
   if (fadeSamples > 0) {
@@ -193,6 +193,31 @@ void Looper::applyCrossfade(int loopIndex) {
         int endSampleIdx = loop->length - fadeSamples + i;
         channelData[endSampleIdx] =
             channelData[endSampleIdx] * (1.0f - alpha) + fadeIn[i] * alpha;
+      }
+    }
+  }
+}
+
+void Looper::applyFadeOut(int loopIndex) {
+  if (loopIndex < 0 || loopIndex >= static_cast<int>(loops.size()))
+    return;
+
+  auto &loop = loops[static_cast<size_t>(loopIndex)];
+
+  int actualSamples = currentLoopSamples;
+  if (actualSamples >= loop->length)
+    return;
+
+  int fadeSamples =
+      juce::jmin(actualSamples, (int)(currentSampleRate * 0.01));
+
+  if (fadeSamples > 0) {
+    for (int channel = 0; channel < loop->buffer.getNumChannels(); ++channel) {
+      auto *channelData = loop->buffer.getWritePointer(channel);
+      int fadeStart = actualSamples - fadeSamples;
+      for (int i = 0; i < fadeSamples; ++i) {
+        float alpha = static_cast<float>(i) / static_cast<float>(fadeSamples);
+        channelData[fadeStart + i] *= (1.0f - alpha);
       }
     }
   }

@@ -101,6 +101,9 @@ private:
   // Crossfade helper
   void applyCrossfade(int loopIndex);
 
+  // Fade out the tail of a partial recording to avoid a pop at the gap
+  void applyFadeOut(int loopIndex);
+
   // Thread-safe request flags
   std::atomic<bool> requestClear{false};
   std::atomic<bool> requestUndo{false};
