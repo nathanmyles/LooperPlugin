@@ -167,14 +167,16 @@ void Looper::applyCrossfade(int loopIndex) {
   if (fadeSamples > 0) {
     for (int channel = 0; channel < loop->buffer.getNumChannels(); ++channel) {
       auto *channelData = loop->buffer.getWritePointer(channel);
+
+      // Copy the fade-in region before writing — the read/write ranges may
+      // overlap when loop->length < 2*fadeSamples, corrupting the source.
+      std::vector<float> fadeIn(channelData, channelData + fadeSamples);
+
       for (int i = 0; i < fadeSamples; ++i) {
-        float alpha = (float)i / (float)fadeSamples;
-        // Ensure we don't access beyond the buffer bounds
-        int endSampleIdx =
-            juce::jmin(loop->length - 1, loop->length - fadeSamples + i);
-        // Mix start of loop into end of loop
+        float alpha = static_cast<float>(i) / static_cast<float>(fadeSamples);
+        int endSampleIdx = loop->length - fadeSamples + i;
         channelData[endSampleIdx] =
-            channelData[endSampleIdx] * (1.0f - alpha) + channelData[i] * alpha;
+            channelData[endSampleIdx] * (1.0f - alpha) + fadeIn[i] * alpha;
       }
     }
   }
