@@ -111,13 +111,13 @@ public:
                         float newValue) override;
 
 private:
-  std::atomic<float> *playAllParam = nullptr;
-  std::atomic<float> *monitorParam = nullptr;
-  std::atomic<float> *recordParam = nullptr;
-  std::atomic<float> *playParam = nullptr;
-  std::atomic<float> *soloParam = nullptr;
-  std::atomic<float> *clearParam = nullptr;
-  std::atomic<float> *undoParam = nullptr;
+  std::atomic<float> *playAllParam;
+  std::atomic<float> *monitorParam;
+  std::atomic<float> *recordParam;
+  std::atomic<float> *playParam;
+  std::atomic<float> *soloParam;
+  std::atomic<float> *clearParam;
+  std::atomic<float> *undoParam;
   std::atomic<int> currentTrackId{-1};
 
   // Core components

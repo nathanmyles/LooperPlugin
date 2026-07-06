@@ -29,15 +29,14 @@ LooperAudioProcessor::LooperAudioProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
               ),
-      parameters(*this, nullptr, "PARAMETERS", createParameterLayout()) {
-  playAllParam = parameters.getRawParameterValue("playAll");
-  monitorParam = parameters.getRawParameterValue("monitor");
-  recordParam = parameters.getRawParameterValue("record");
-  playParam = parameters.getRawParameterValue("play");
-  soloParam = parameters.getRawParameterValue("solo");
-  clearParam = parameters.getRawParameterValue("clear");
-  undoParam = parameters.getRawParameterValue("undo");
-
+      parameters(*this, nullptr, "PARAMETERS", createParameterLayout()),
+      playAllParam(parameters.getRawParameterValue("playAll")),
+      monitorParam(parameters.getRawParameterValue("monitor")),
+      recordParam(parameters.getRawParameterValue("record")),
+      playParam(parameters.getRawParameterValue("play")),
+      soloParam(parameters.getRawParameterValue("solo")),
+      clearParam(parameters.getRawParameterValue("clear")),
+      undoParam(parameters.getRawParameterValue("undo")) {
   parameters.addParameterListener("playAll", this);
   parameters.addParameterListener("record", this);
   parameters.addParameterListener("play", this);
