@@ -69,6 +69,16 @@ void Looper::addNewLoop() {
 }
 
 void Looper::removeLastLoop() {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  removeLastLoopInternal();
+}
+
+void Looper::clearAll() {
+  std::lock_guard<std::mutex> lock(loopsMutex);
+  clearAllInternal();
+}
+
+void Looper::removeLastLoopInternal() {
   if (!loops.empty()) {
     if (recordingLoopIndex == static_cast<int>(loops.size()) - 1) {
       recordingLoopIndex = -1;
@@ -77,7 +87,7 @@ void Looper::removeLastLoop() {
   }
 }
 
-void Looper::clearAll() {
+void Looper::clearAllInternal() {
   loops.clear();
   recordingLoopIndex = -1;
 }
@@ -229,15 +239,13 @@ void Looper::requestUndoLast() { requestUndo.store(true); }
 
 void Looper::handlePendingRequests() {
   if (requestClear.exchange(false)) {
-    // Lock loops for modification to prevent race condition
     std::lock_guard<std::mutex> lock(loopsMutex);
-    clearAll();
+    clearAllInternal();
   }
 
   if (requestUndo.exchange(false)) {
-    // Lock loops for modification to prevent race condition
     std::lock_guard<std::mutex> lock(loopsMutex);
-    removeLastLoop();
+    removeLastLoopInternal();
   }
 }
 

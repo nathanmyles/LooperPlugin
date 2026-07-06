@@ -98,6 +98,10 @@ private:
   int maxLoopLength = 44100 * 60;
   int numChannels = 2;
 
+  // Unlocked helpers (caller must hold loopsMutex)
+  void removeLastLoopInternal();
+  void clearAllInternal();
+
   // Crossfade helper
   void applyCrossfade(int loopIndex);
 
