@@ -234,6 +234,7 @@ void TrackManager::clearTrack(int trackId) {
 
     if (!hasContent) {
       resetBaseLoopLength();
+      resetReadPosition();
       stopAllPlaybackInternal();
     }
   }
@@ -263,6 +264,7 @@ void TrackManager::undoTrack(int trackId) {
 
     if (!hasContent) {
       resetBaseLoopLength();
+      resetReadPosition();
       stopAllPlaybackInternal();
     }
   }
