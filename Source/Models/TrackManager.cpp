@@ -84,6 +84,11 @@ void TrackManager::removeTrack(int trackId) {
                          });
 
   if (it != tracks.end()) {
+    if ((*it)->isRecording())
+      (*it)->stopRecording();
+    if ((*it)->isPlaying())
+      (*it)->stopPlayback();
+
     tracks.erase(it);
 
     // Check if any tracks still have content
