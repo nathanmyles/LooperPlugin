@@ -75,10 +75,11 @@ target_compile_definitions(LooperPlugin
 )
 
 target_link_libraries(LooperPlugin
-    PRIVATE
+    PUBLIC
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_recommended_config_flags
+    PRIVATE
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
@@ -97,11 +98,6 @@ CPMAddPackage(
 add_executable(LooperPluginTests
     Tests/test_main.cpp
     Tests/test_looper.cpp
-)
-
-target_include_directories(LooperPluginTests
-    PRIVATE
-        ${LIB_DIR}/juce/modules
 )
 
 target_compile_features(LooperPluginTests PRIVATE cxx_std_17)
