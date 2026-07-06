@@ -102,6 +102,7 @@ void TrackManager::removeTrack(int trackId) {
 
     if (!hasContent) {
       resetBaseLoopLength();
+      stopAllPlaybackInternal();
     }
   }
 }
@@ -182,6 +183,12 @@ void TrackManager::stopAllRecordingInternal() {
   }
 }
 
+void TrackManager::stopAllPlaybackInternal() {
+  for (auto &track : tracks) {
+    track->stopPlayback();
+  }
+}
+
 void TrackManager::startPlaybackTrack(int trackId) {
   const std::lock_guard<std::mutex> lock(tracksMutex);
   startPlaybackTrackInternal(trackId);
@@ -227,6 +234,7 @@ void TrackManager::clearTrack(int trackId) {
 
     if (!hasContent) {
       resetBaseLoopLength();
+      stopAllPlaybackInternal();
     }
   }
 }
@@ -239,7 +247,25 @@ void TrackManager::undoTrack(int trackId) {
       track->stopRecording();
     }
 
-    track->requestUndoLast();
+    auto &looper = track->getLooper();
+    if (looper.getNumLoops() == 0) {
+      return;
+    }
+
+    looper.removeLastLoop();
+
+    bool hasContent = false;
+    for (const auto &t : tracks) {
+      if (t->getLooper().hasLoops()) {
+        hasContent = true;
+        break;
+      }
+    }
+
+    if (!hasContent) {
+      resetBaseLoopLength();
+      stopAllPlaybackInternal();
+    }
   }
 }
 
@@ -258,12 +284,29 @@ void TrackManager::requestClearAll() {
 
 void TrackManager::requestUndoLast() {
   const std::lock_guard<std::mutex> lock(tracksMutex);
-  // Find the track with the most recent loop and undo it
   Track *track = findTrackWithMostRecentLoopInternal();
   if (track != nullptr) {
-    // Stop recording on this track to prevent writing into a just-removed loop
     stopAllRecordingInternal();
-    track->requestUndoLast();
+
+    auto &looper = track->getLooper();
+    if (looper.getNumLoops() == 0) {
+      return;
+    }
+
+    looper.removeLastLoop();
+
+    bool hasContent = false;
+    for (const auto &t : tracks) {
+      if (t->getLooper().hasLoops()) {
+        hasContent = true;
+        break;
+      }
+    }
+
+    if (!hasContent) {
+      resetBaseLoopLength();
+      stopAllPlaybackInternal();
+    }
   }
 }
 

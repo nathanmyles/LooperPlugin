@@ -116,6 +116,7 @@ private:
   Track *findTrackInternal(int trackId) const;
   Track *findTrackWithMostRecentLoopInternal() const;
   void stopAllRecordingInternal();
+  void stopAllPlaybackInternal();
   void startPlaybackTrackInternal(int trackId);
   bool isAnyTrackSoloedInternal() const;
   bool isPlayingInternal() const;
