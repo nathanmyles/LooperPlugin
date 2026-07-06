@@ -22,7 +22,7 @@ CPMAddPackage(
 juce_add_plugin(LooperPlugin
     COMPANY_NAME "NathanMyles"
     IS_SYNTH FALSE
-    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     AU_MAIN_TYPE kAudioUnitType_MusicEffect
