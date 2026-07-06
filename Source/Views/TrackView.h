@@ -80,10 +80,6 @@ private:
   juce::Label loopCountLabel;
   juce::TextButton playButton;
 
-  // State tracking
-  bool wasRecording = false;
-  int lastLoopCount = 0;
-
   void setupComponents();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackView)

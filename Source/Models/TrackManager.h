@@ -60,9 +60,6 @@ public:
   // Calculate wrapped position within base loop length
   int getWrappedReadPosition() const;
 
-  // Check if a position would exceed the base loop length
-  bool wouldExceedLoopLength(int position) const;
-
   // Get max loop duration in samples (e.g., 60 seconds)
   int getMaxLoopLength() const { return maxLoopLength; }
 
@@ -70,7 +67,7 @@ public:
   Track *addTrack();
   void removeTrack(int trackId);
   void removeAllTracks();
-  std::vector<Track *> getTrackCopies() const;
+  std::vector<Track *> getTracks() const;
   Track *findTrack(int trackId);
   int getTrackCount() const;
 

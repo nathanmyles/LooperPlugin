@@ -153,8 +153,8 @@ void TrackContainer::selectTrack(int trackId) {
 
 // TrackListComponent implementation
 
-TrackContainer::TrackListComponent::TrackListComponent(TrackContainer &owner)
-    : owner(owner) {}
+TrackContainer::TrackListComponent::TrackListComponent(TrackContainer &ownerRef)
+    : owner(ownerRef) {}
 
 void TrackContainer::TrackListComponent::resized() {
   auto bounds = getLocalBounds();

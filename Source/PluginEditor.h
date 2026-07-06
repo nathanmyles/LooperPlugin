@@ -36,8 +36,12 @@ public:
   void timerCallback() override;
 
   // KeyListener - intercepts keys regardless of focus
+  using juce::KeyListener::keyPressed;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
   bool keyPressed(const juce::KeyPress &key,
                   juce::Component *originatingComponent) override;
+#pragma clang diagnostic pop
 
 private:
   LooperAudioProcessor &audioProcessor;

@@ -64,11 +64,6 @@ int TrackManager::getWrappedReadPosition() const {
   return pos;
 }
 
-bool TrackManager::wouldExceedLoopLength(int position) const {
-  int baseLength = baseLoopLength.load();
-  return baseLength > 0 && position >= baseLength;
-}
-
 // Track Management
 
 Track *TrackManager::addTrack() {
@@ -114,7 +109,7 @@ void TrackManager::removeAllTracks() {
   nextTrackId = 0;
 }
 
-std::vector<Track *> TrackManager::getTrackCopies() const {
+std::vector<Track *> TrackManager::getTracks() const {
   const std::lock_guard<std::mutex> lock(tracksMutex);
   std::vector<Track *> copies;
   copies.reserve(tracks.size());
@@ -221,7 +216,7 @@ void TrackManager::clearTrack(int trackId) {
       track->stopRecording();
     }
 
-    track->getLooper().clearAll();
+    track->clearAll();
 
     // Check if any tracks still have content
     bool hasContent = false;
@@ -247,12 +242,11 @@ void TrackManager::undoTrack(int trackId) {
       track->stopRecording();
     }
 
-    auto &looper = track->getLooper();
-    if (looper.getNumLoops() == 0) {
+    if (track->getLooper().getNumLoops() == 0) {
       return;
     }
 
-    looper.removeLastLoop();
+    track->undoLast();
 
     bool hasContent = false;
     for (const auto &t : tracks) {
@@ -288,12 +282,11 @@ void TrackManager::requestUndoLast() {
   if (track != nullptr) {
     stopAllRecordingInternal();
 
-    auto &looper = track->getLooper();
-    if (looper.getNumLoops() == 0) {
+    if (track->getLooper().getNumLoops() == 0) {
       return;
     }
 
-    looper.removeLastLoop();
+    track->undoLast();
 
     bool hasContent = false;
     for (const auto &t : tracks) {
@@ -362,7 +355,7 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
 
   // Handle pending requests for all tracks
   for (auto &track : tracks) {
-    track->handlePendingRequests();
+    track->getLooper().handlePendingRequests();
   }
 
   // Check if any track is soloed
@@ -390,8 +383,8 @@ void TrackManager::processBlock(juce::AudioBuffer<float> &buffer,
   // Mix all track outputs
   int currentReadPos = getWrappedReadPosition();
   for (auto &track : tracks) {
-    if (track->shouldOutput(anySoloed)) {
-      float effectiveVolume = track->getEffectiveVolume(anySoloed);
+    float effectiveVolume = track->getEffectiveVolume(anySoloed);
+    if (effectiveVolume > 0.0f) {
       track->getLooper().processPlayback(buffer, effectiveVolume,
                                          currentReadPos, loopLen);
     }

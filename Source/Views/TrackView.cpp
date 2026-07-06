@@ -29,7 +29,7 @@ void TrackView::setupComponents() {
   // Track name label
   trackNameLabel.setText(track.getName(), juce::dontSendNotification);
   trackNameLabel.setJustificationType(juce::Justification::centred);
-  trackNameLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+  trackNameLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   addAndMakeVisible(trackNameLabel);
 
   // Volume slider
@@ -140,7 +140,7 @@ void TrackView::paint(juce::Graphics &g) {
   }
 }
 
-void TrackView::mouseDown(const juce::MouseEvent &event) {
+void TrackView::mouseDown(const juce::MouseEvent &) {
   if (onTrackClicked)
     onTrackClicked(trackId);
 }

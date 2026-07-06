@@ -73,8 +73,6 @@ public:
   void undoLast();
   void requestClearAll() { looper.requestClearAll(); }
   void requestUndoLast() { looper.requestUndoLast(); }
-  void handlePendingRequests() { looper.handlePendingRequests(); }
-
   // Process audio for this track
   // Returns true if this track should contribute to output
   bool shouldOutput(bool anyTrackSoloed) const;

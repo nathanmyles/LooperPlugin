@@ -64,8 +64,8 @@ public:
   Track *addTrack() { return trackManager.addTrack(); }
   void removeTrack(int trackId) { trackManager.removeTrack(trackId); }
   void removeAllTracks() { trackManager.removeAllTracks(); }
-  std::vector<Track *> getTrackCopies() {
-    return trackManager.getTrackCopies();
+  std::vector<Track *> getTracks() {
+    return trackManager.getTracks();
   }
   Track *findTrack(int trackId) { return trackManager.findTrack(trackId); }
   int getTrackCount() const { return trackManager.getTrackCount(); }

@@ -62,7 +62,7 @@ void LooperAudioProcessorEditor::setupCallbacks() {
       playParam->setValueNotifyingHost(0.0f);
   };
 
-  controlBar.onMonitorChanged = [this](bool isMonitoring) {
+  controlBar.onMonitorChanged = [](bool isMonitoring) {
     // Monitor state is handled automatically by the processor
     juce::ignoreUnused(isMonitoring);
   };
@@ -154,7 +154,7 @@ void LooperAudioProcessorEditor::addInitialTrack() {
 
   // Select the first track by default
   if (audioProcessor.getTrackCount() > 0) {
-    auto tracks = audioProcessor.getTrackCopies();
+    auto tracks = audioProcessor.getTracks();
     if (!tracks.empty()) {
       trackContainer.selectTrack(tracks[0]->getId());
     }
@@ -168,14 +168,14 @@ void LooperAudioProcessorEditor::syncTracksWithProcessor() {
   trackContainer.removeAllTrackViews();
 
   // Add track views for all tracks in processor
-  for (auto *track : audioProcessor.getTrackCopies()) {
+  for (auto *track : audioProcessor.getTracks()) {
     trackContainer.addTrackView(track);
   }
 }
 
 void LooperAudioProcessorEditor::updateTrackButtons() {
   bool anyPlaying = false;
-  auto tracks = audioProcessor.getTrackCopies();
+  auto tracks = audioProcessor.getTracks();
   for (auto *track : tracks) {
     if (track->isPlaying())
       anyPlaying = true;
